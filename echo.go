@@ -8,8 +8,8 @@ Example:
   import (
     "net/http"
 
-    "github.com/labstack/echo/v4"
-    "github.com/labstack/echo/v4/middleware"
+    "github.com/adverax/echo"
+    "github.com/adverax/echo/middleware"
   )
 
   // Handler
@@ -29,10 +29,9 @@ Example:
     e.GET("/", hello)
 
     // Start server
-    e.Logger.Fatal(e.Start(":1323"))
+    e.Logger.Error(e.Start(":1323"))
   }
 
-Learn more at https://echo.labstack.com
 */
 package echo
 
@@ -42,9 +41,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
-	"io"
 	"io/ioutil"
-	stdLog "log"
 	"net"
 	"net/http"
 	"net/url"
@@ -55,22 +52,21 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labstack/gommon/color"
-	"github.com/labstack/gommon/log"
+	"github.com/adverax/echo/cache"
+	"github.com/adverax/echo/generic"
+	"github.com/adverax/echo/log"
 	"golang.org/x/crypto/acme/autocert"
 )
 
 type (
 	// Echo is the top-level framework instance.
 	Echo struct {
-		StdLogger        *stdLog.Logger
-		colorer          *color.Color
 		premiddleware    []MiddlewareFunc
 		middleware       []MiddlewareFunc
 		maxParam         *int
 		router           *Router
 		notFoundHandler  HandlerFunc
-		pool             sync.Pool
+		roots            sync.Pool
 		Server           *http.Server
 		TLSServer        *http.Server
 		Listener         net.Listener
@@ -81,10 +77,11 @@ type (
 		HideBanner       bool
 		HidePort         bool
 		HTTPErrorHandler HTTPErrorHandler
-		Binder           Binder
-		Validator        Validator
-		Renderer         Renderer
-		Logger           Logger
+		Logger           log.Logger
+		Locale           Locale // Prototype
+		UrlLinker        UrlLinker
+		Cache            cache.Cache
+		Context          stdContext.Context
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -109,16 +106,6 @@ type (
 
 	// HTTPErrorHandler is a centralized HTTP error handler.
 	HTTPErrorHandler func(error, Context)
-
-	// Validator is the interface that wraps the Validate function.
-	Validator interface {
-		Validate(i interface{}) error
-	}
-
-	// Renderer is the interface that wraps the Render function.
-	Renderer interface {
-		Render(io.Writer, string, interface{}, Context) error
-	}
 
 	// Map defines a generic map of type `map[string]interface{}`.
 	Map map[string]interface{}
@@ -223,8 +210,8 @@ const (
 
 const (
 	// Version of Echo
-	Version = "4.0.0"
-	website = "https://echo.labstack.com"
+	Version = "5.0.0"
+	website = "https://github.com/adverax/echo"
 	// http://patorjk.com/software/taag/#p=display&f=Small%20Slant&t=Echo
 	banner = `
    ____    __
@@ -272,6 +259,8 @@ var (
 	ErrInvalidRedirectCode         = errors.New("invalid redirect status code")
 	ErrCookieNotFound              = errors.New("cookie not found")
 	ErrInvalidCertOrKeyType        = errors.New("invalid cert or key type, must be string or []byte")
+	ErrNoMatch                     = errors.New("no match")
+	ErrAbort                       = errors.New("abort")
 )
 
 // Error handlers
@@ -290,20 +279,20 @@ func New() (e *Echo) {
 	e = &Echo{
 		Server:    new(http.Server),
 		TLSServer: new(http.Server),
+		Locale:    DefaultLocale,
+		UrlLinker: DefaultLinker,
+		Cache:     DefaultCache,
+		Context:   stdContext.Background(),
+		Logger:    log.NewDebug("\n"),
 		AutoTLSManager: autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		},
-		Logger:   log.New("echo"),
-		colorer:  color.New(),
 		maxParam: new(int),
 	}
 	e.Server.Handler = e
 	e.TLSServer.Handler = e
 	e.HTTPErrorHandler = e.DefaultHTTPErrorHandler
-	e.Binder = &DefaultBinder{}
-	e.Logger.SetLevel(log.ERROR)
-	e.StdLogger = stdLog.New(e.Logger.Output(), e.Logger.Prefix()+": ", 0)
-	e.pool.New = func() interface{} {
+	e.roots.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
 	e.router = NewRouter(e)
@@ -312,13 +301,16 @@ func New() (e *Echo) {
 
 // NewContext returns a Context instance.
 func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
+	locale := generic.MakePointerTo(generic.CloneValue(e.Locale))
 	return &context{
+		Context:  e.Context,
 		request:  r,
 		response: NewResponse(w, e),
-		store:    make(Map),
+		store:    make(map[interface{}]interface{}),
 		echo:     e,
 		pvalues:  make([]string, *e.maxParam),
 		handler:  NotFoundHandler,
+		locale:   locale.(Locale),
 	}
 }
 
@@ -555,19 +547,19 @@ func (e *Echo) Routes() []*Route {
 // AcquireContext returns an empty `Context` instance from the pool.
 // You must return the context by calling `ReleaseContext()`.
 func (e *Echo) AcquireContext() Context {
-	return e.pool.Get().(Context)
+	return e.roots.Get().(Context)
 }
 
 // ReleaseContext returns the `Context` instance back to the pool.
 // You must call it after `AcquireContext()`.
 func (e *Echo) ReleaseContext(c Context) {
-	e.pool.Put(c)
+	e.roots.Put(c)
 }
 
 // ServeHTTP implements `http.Handler` interface, which serves HTTP requests.
 func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Acquire context
-	c := e.pool.Get().(*context)
+	c := e.roots.Get().(*context)
 	c.Reset(r, w)
 
 	h := NotFoundHandler
@@ -575,15 +567,21 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e.premiddleware == nil {
 		e.router.Find(r.Method, getPath(r), c)
 		h = c.Handler()
-		h = applyMiddleware(h, e.middleware...)
+		for i := len(e.middleware) - 1; i >= 0; i-- {
+			h = e.middleware[i](h)
+		}
 	} else {
 		h = func(c Context) error {
 			e.router.Find(r.Method, getPath(r), c)
 			h := c.Handler()
-			h = applyMiddleware(h, e.middleware...)
+			for i := len(e.middleware) - 1; i >= 0; i-- {
+				h = e.middleware[i](h)
+			}
 			return h(c)
 		}
-		h = applyMiddleware(h, e.premiddleware...)
+		for i := len(e.premiddleware) - 1; i >= 0; i-- {
+			h = e.premiddleware[i](h)
+		}
 	}
 
 	// Execute chain
@@ -592,7 +590,7 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Release context
-	e.pool.Put(c)
+	e.roots.Put(c)
 }
 
 // Start starts an HTTP server.
@@ -656,16 +654,15 @@ func (e *Echo) startTLS(address string) error {
 // StartServer starts a custom http server.
 func (e *Echo) StartServer(s *http.Server) (err error) {
 	// Setup
-	e.colorer.SetOutput(e.Logger.Output())
-	s.ErrorLog = e.StdLogger
+	//s.ErrorLog = e.StdLogger
 	s.Handler = e
-	if e.Debug {
+	/*if e.Debug {
 		e.Logger.SetLevel(log.DEBUG)
 	}
 
 	if !e.HideBanner {
 		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
-	}
+	}*/
 
 	if s.TLSConfig == nil {
 		if e.Listener == nil {
@@ -675,7 +672,7 @@ func (e *Echo) StartServer(s *http.Server) (err error) {
 			}
 		}
 		if !e.HidePort {
-			e.colorer.Printf("⇨ http server started on %s\n", e.colorer.Green(e.Listener.Addr()))
+			e.Logger.Info(fmt.Sprintf("⇨ http server started on %s\n", e.Listener.Addr()))
 		}
 		return s.Serve(e.Listener)
 	}
@@ -687,7 +684,7 @@ func (e *Echo) StartServer(s *http.Server) (err error) {
 		e.TLSListener = tls.NewListener(l, s.TLSConfig)
 	}
 	if !e.HidePort {
-		e.colorer.Printf("⇨ https server started on %s\n", e.colorer.Green(e.TLSListener.Addr()))
+		e.Logger.Info(fmt.Sprintf("⇨ https server started on %s\n", e.TLSListener.Addr()))
 	}
 	return s.Serve(e.TLSListener)
 }
@@ -752,11 +749,11 @@ func WrapMiddleware(m func(http.Handler) http.Handler) MiddlewareFunc {
 }
 
 func getPath(r *http.Request) string {
-	path := r.URL.RawPath
-	if path == "" {
-		path = r.URL.Path
+	p := r.URL.RawPath
+	if p == "" {
+		p = r.URL.Path
 	}
-	return path
+	return p
 }
 
 func handlerName(h HandlerFunc) string {
@@ -797,11 +794,4 @@ func newListener(address string) (*tcpKeepAliveListener, error) {
 		return nil, err
 	}
 	return &tcpKeepAliveListener{l.(*net.TCPListener)}, nil
-}
-
-func applyMiddleware(h HandlerFunc, middleware ...MiddlewareFunc) HandlerFunc {
-	for i := len(middleware) - 1; i >= 0; i-- {
-		h = middleware[i](h)
-	}
-	return h
 }

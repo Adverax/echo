@@ -10,8 +10,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/humanize/bytes"
 )
 
 type (

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/random"
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/security"
 )
 
 type (
@@ -128,7 +128,7 @@ func CSRFWithConfig(config CSRFConfig) echo.MiddlewareFunc {
 
 			// Generate token
 			if err != nil {
-				token = random.String(config.TokenLength)
+				token = security.String(security.ALNUM, config.TokenLength)
 			} else {
 				// Reuse token
 				token = k.Value

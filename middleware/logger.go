@@ -1,5 +1,6 @@
 package middleware
 
+/*
 import (
 	"bytes"
 	"io"
@@ -9,9 +10,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/color"
-	"github.com/valyala/fasttemplate"
+	"github.com/l a bstack/g o mmon/color"
+	"github.com/v a lyala/f as ttemplate"
+	"github.com/adverax/echo"
 )
 
 type (
@@ -215,3 +216,4 @@ func LoggerWithConfig(config LoggerConfig) echo.MiddlewareFunc {
 		}
 	}
 }
+*/

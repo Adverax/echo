@@ -7,23 +7,15 @@ import (
 	"encoding/xml"
 	"errors"
 	"fmt"
-	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
-	"text/template"
 	"time"
 
 	testify "github.com/stretchr/testify/assert"
-)
-
-type (
-	Template struct {
-		templates *template.Template
-	}
 )
 
 var testUser = user{1, "Jon Snow"}
@@ -70,12 +62,7 @@ func BenchmarkAllocXML(b *testing.B) {
 	}
 }
 
-func (t *Template) Render(w io.Writer, name string, data interface{}, c Context) error {
-	return t.templates.ExecuteTemplate(w, name, data)
-}
-
-type responseWriterErr struct {
-}
+type responseWriterErr struct{}
 
 func (responseWriterErr) Header() http.Header {
 	return http.Header{}
@@ -106,28 +93,10 @@ func TestContext(t *testing.T) {
 	// Response
 	assert.NotNil(c.Response())
 
-	//--------
-	// Render
-	//--------
-
-	tmpl := &Template{
-		templates: template.Must(template.New("hello").Parse("Hello, {{.}}!")),
-	}
-	c.echo.Renderer = tmpl
-	err := c.Render(http.StatusOK, "hello", "Jon Snow")
-	if assert.NoError(err) {
-		assert.Equal(http.StatusOK, rec.Code)
-		assert.Equal("Hello, Jon Snow!", rec.Body.String())
-	}
-
-	c.echo.Renderer = nil
-	err = c.Render(http.StatusOK, "hello", "Jon Snow")
-	assert.Error(err)
-
 	// JSON
 	rec = httptest.NewRecorder()
 	c = e.NewContext(req, rec).(*context)
-	err = c.JSON(http.StatusOK, user{1, "Jon Snow"})
+	err := c.JSON(http.StatusOK, user{1, "Jon Snow"})
 	if assert.NoError(err) {
 		assert.Equal(http.StatusOK, rec.Code)
 		assert.Equal(MIMEApplicationJSONCharsetUTF8, rec.Header().Get(HeaderContentType))
@@ -407,7 +376,7 @@ func TestContextCookie(t *testing.T) {
 	cookie = &http.Cookie{
 		Name:     "SSID",
 		Value:    "Ap4PGTEq",
-		Domain:   "labstack.com",
+		Domain:   "google.com",
 		Path:     "/",
 		Expires:  time.Now(),
 		Secure:   true,
@@ -416,7 +385,7 @@ func TestContextCookie(t *testing.T) {
 	c.SetCookie(cookie)
 	assert.Contains(rec.Header().Get(HeaderSetCookie), "SSID")
 	assert.Contains(rec.Header().Get(HeaderSetCookie), "Ap4PGTEq")
-	assert.Contains(rec.Header().Get(HeaderSetCookie), "labstack.com")
+	assert.Contains(rec.Header().Get(HeaderSetCookie), "google.com")
 	assert.Contains(rec.Header().Get(HeaderSetCookie), "Secure")
 	assert.Contains(rec.Header().Get(HeaderSetCookie), "HttpOnly")
 }
@@ -460,7 +429,7 @@ func TestContextPathParam(t *testing.T) {
 func TestContextFormValue(t *testing.T) {
 	f := make(url.Values)
 	f.Set("name", "Jon Snow")
-	f.Set("email", "jon@labstack.com")
+	f.Set("email", "jon@google.com")
 
 	e := New()
 	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(f.Encode()))
@@ -469,14 +438,14 @@ func TestContextFormValue(t *testing.T) {
 
 	// FormValue
 	testify.Equal(t, "Jon Snow", c.FormValue("name"))
-	testify.Equal(t, "jon@labstack.com", c.FormValue("email"))
+	testify.Equal(t, "jon@google.com", c.FormValue("email"))
 
 	// FormParams
 	params, err := c.FormParams()
 	if testify.NoError(t, err) {
 		testify.Equal(t, url.Values{
 			"name":  []string{"Jon Snow"},
-			"email": []string{"jon@labstack.com"},
+			"email": []string{"jon@google.com"},
 		}, params)
 	}
 
@@ -492,19 +461,19 @@ func TestContextFormValue(t *testing.T) {
 func TestContextQueryParam(t *testing.T) {
 	q := make(url.Values)
 	q.Set("name", "Jon Snow")
-	q.Set("email", "jon@labstack.com")
+	q.Set("email", "jon@google.com")
 	req := httptest.NewRequest(http.MethodGet, "/?"+q.Encode(), nil)
 	e := New()
 	c := e.NewContext(req, nil)
 
 	// QueryParam
 	testify.Equal(t, "Jon Snow", c.QueryParam("name"))
-	testify.Equal(t, "jon@labstack.com", c.QueryParam("email"))
+	testify.Equal(t, "jon@google.com", c.QueryParam("email"))
 
 	// QueryParams
 	testify.Equal(t, url.Values{
 		"name":  []string{"Jon Snow"},
-		"email": []string{"jon@labstack.com"},
+		"email": []string{"jon@google.com"},
 	}, c.QueryParams())
 }
 
@@ -548,10 +517,10 @@ func TestContextRedirect(t *testing.T) {
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
-	testify.Equal(t, nil, c.Redirect(http.StatusMovedPermanently, "http://labstack.github.io/echo"))
+	testify.Equal(t, nil, c.Redirect(http.StatusMovedPermanently, "http://google.github.io/echo"))
 	testify.Equal(t, http.StatusMovedPermanently, rec.Code)
-	testify.Equal(t, "http://labstack.github.io/echo", rec.Header().Get(HeaderLocation))
-	testify.Error(t, c.Redirect(310, "http://labstack.github.io/echo"))
+	testify.Equal(t, "http://google.github.io/echo", rec.Header().Get(HeaderLocation))
+	testify.Error(t, c.Redirect(310, "http://google.github.io/echo"))
 }
 
 func TestContextStore(t *testing.T) {
@@ -612,22 +581,6 @@ func TestContext_Path(t *testing.T) {
 
 	c.SetPath(path)
 	testify.Equal(t, path, c.Path())
-}
-
-type validator struct{}
-
-func (*validator) Validate(i interface{}) error {
-	return nil
-}
-
-func TestContext_Validate(t *testing.T) {
-	e := New()
-	c := e.NewContext(nil, nil)
-
-	testify.Error(t, c.Validate(struct{}{}))
-
-	e.Validator = &validator{}
-	testify.NoError(t, c.Validate(struct{}{}))
 }
 
 func TestContext_QueryString(t *testing.T) {
@@ -755,23 +708,6 @@ func TestContext_IsWebSocket(t *testing.T) {
 	}
 }
 
-func TestContext_Bind(t *testing.T) {
-	e := New()
-	req := httptest.NewRequest(POST, "/", strings.NewReader(userJSON))
-	c := e.NewContext(req, nil)
-
-	var u *user
-
-	err := c.Bind(u)
-	testify.Error(t, err)
-	testify.Nil(t, u)
-
-	req.Header.Add(HeaderContentType, MIMEApplicationJSON)
-	err = c.Bind(&u)
-	testify.NoError(t, err)
-	testify.Equal(t, &user{1, "Jon Snow"}, u)
-}
-
 func TestContext_Logger(t *testing.T) {
 	e := New()
 	c := e.NewContext(nil, nil)
@@ -815,4 +751,11 @@ func TestContext_RealIP(t *testing.T) {
 	for _, tt := range tests {
 		testify.Equal(t, tt.s, tt.c.RealIP())
 	}
+}
+
+func TestContext_WithValue(t *testing.T) {
+	e := New()
+	c := e.NewContext(nil, nil)
+	cc := c.WithValue("foo", "bar")
+	testify.Equal(t, "bar", cc.Value("foo"))
 }

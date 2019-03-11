@@ -5,69 +5,70 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/adverax/echo"
 )
 
 type middlewareGenerator func() echo.MiddlewareFunc
 
 func TestRedirectHTTPSRedirect(t *testing.T) {
-	res := redirectTest(HTTPSRedirect, "labstack.com", nil)
+	res := redirectTest(HTTPSRedirect, "google.com", nil)
 
 	assert.Equal(t, http.StatusMovedPermanently, res.Code)
-	assert.Equal(t, "https://labstack.com/", res.Header().Get(echo.HeaderLocation))
+	assert.Equal(t, "https://google.com/", res.Header().Get(echo.HeaderLocation))
 }
 
 func TestHTTPSRedirectBehindTLSTerminationProxy(t *testing.T) {
 	header := http.Header{}
 	header.Set(echo.HeaderXForwardedProto, "https")
-	res := redirectTest(HTTPSRedirect, "labstack.com", header)
+	res := redirectTest(HTTPSRedirect, "google.com", header)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 }
 
 func TestRedirectHTTPSWWWRedirect(t *testing.T) {
-	res := redirectTest(HTTPSWWWRedirect, "labstack.com", nil)
+	res := redirectTest(HTTPSWWWRedirect, "google.com", nil)
 
 	assert.Equal(t, http.StatusMovedPermanently, res.Code)
-	assert.Equal(t, "https://www.labstack.com/", res.Header().Get(echo.HeaderLocation))
+	assert.Equal(t, "https://www.google.com/", res.Header().Get(echo.HeaderLocation))
 }
 
 func TestRedirectHTTPSWWWRedirectBehindTLSTerminationProxy(t *testing.T) {
 	header := http.Header{}
 	header.Set(echo.HeaderXForwardedProto, "https")
-	res := redirectTest(HTTPSWWWRedirect, "labstack.com", header)
+	res := redirectTest(HTTPSWWWRedirect, "google.com", header)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 }
 
 func TestRedirectHTTPSNonWWWRedirect(t *testing.T) {
-	res := redirectTest(HTTPSNonWWWRedirect, "www.labstack.com", nil)
+	res := redirectTest(HTTPSNonWWWRedirect, "www.google.com", nil)
 
 	assert.Equal(t, http.StatusMovedPermanently, res.Code)
-	assert.Equal(t, "https://labstack.com/", res.Header().Get(echo.HeaderLocation))
+	assert.Equal(t, "https://google.com/", res.Header().Get(echo.HeaderLocation))
 }
 
 func TestRedirectHTTPSNonWWWRedirectBehindTLSTerminationProxy(t *testing.T) {
 	header := http.Header{}
 	header.Set(echo.HeaderXForwardedProto, "https")
-	res := redirectTest(HTTPSNonWWWRedirect, "www.labstack.com", header)
+	res := redirectTest(HTTPSNonWWWRedirect, "www.google.com", header)
 
 	assert.Equal(t, http.StatusOK, res.Code)
 }
 
 func TestRedirectWWWRedirect(t *testing.T) {
-	res := redirectTest(WWWRedirect, "labstack.com", nil)
+	res := redirectTest(WWWRedirect, "google.com", nil)
 
 	assert.Equal(t, http.StatusMovedPermanently, res.Code)
-	assert.Equal(t, "http://www.labstack.com/", res.Header().Get(echo.HeaderLocation))
+	assert.Equal(t, "http://www.google.com/", res.Header().Get(echo.HeaderLocation))
 }
 
 func TestRedirectNonWWWRedirect(t *testing.T) {
-	res := redirectTest(NonWWWRedirect, "www.labstack.com", nil)
+	res := redirectTest(NonWWWRedirect, "www.google.com", nil)
 
 	assert.Equal(t, http.StatusMovedPermanently, res.Code)
-	assert.Equal(t, "http://labstack.com/", res.Header().Get(echo.HeaderLocation))
+	assert.Equal(t, "http://google.com/", res.Header().Get(echo.HeaderLocation))
 }
 
 func redirectTest(fn middlewareGenerator, host string, header http.Header) *httptest.ResponseRecorder {

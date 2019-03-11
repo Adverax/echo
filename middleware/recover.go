@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"runtime"
 
-	"github.com/labstack/echo/v4"
+	"github.com/adverax/echo"
 )
 
 type (
@@ -70,7 +70,7 @@ func RecoverWithConfig(config RecoverConfig) echo.MiddlewareFunc {
 					stack := make([]byte, config.StackSize)
 					length := runtime.Stack(stack, !config.DisableStackAll)
 					if !config.DisablePrintStack {
-						c.Logger().Printf("[PANIC RECOVER] %v %s\n", err, stack[:length])
+						c.Logger().Error(fmt.Sprintf("[PANIC RECOVER] %v %s\n", err, stack[:length]))
 					}
 					c.Error(err)
 				}

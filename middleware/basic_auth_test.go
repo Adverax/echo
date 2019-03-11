@@ -7,15 +7,14 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/adverax/echo"
 )
 
 func TestBasicAuth(t *testing.T) {
 	e := echo.New()
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
-	res := httptest.NewRecorder()
-	c := e.NewContext(req, res)
 	f := func(u, p string, c echo.Context) (bool, error) {
 		if u == "joe" && p == "secret" {
 			return true, nil
@@ -29,6 +28,8 @@ func TestBasicAuth(t *testing.T) {
 	assert := assert.New(t)
 
 	// Valid credentials
+	res := httptest.NewRecorder()
+	c := e.NewContext(req, res)
 	auth := basic + " " + base64.StdEncoding.EncodeToString([]byte("joe:secret"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	assert.NoError(h(c))
@@ -42,16 +43,22 @@ func TestBasicAuth(t *testing.T) {
 	})
 
 	// Valid credentials
+	res = httptest.NewRecorder()
+	c = e.NewContext(req, res)
 	auth = basic + " " + base64.StdEncoding.EncodeToString([]byte("joe:secret"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	assert.NoError(h(c))
 
 	// Case-insensitive header scheme
+	res = httptest.NewRecorder()
+	c = e.NewContext(req, res)
 	auth = strings.ToUpper(basic) + " " + base64.StdEncoding.EncodeToString([]byte("joe:secret"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	assert.NoError(h(c))
 
 	// Invalid credentials
+	res = httptest.NewRecorder()
+	c = e.NewContext(req, res)
 	auth = basic + " " + base64.StdEncoding.EncodeToString([]byte("joe:invalid-password"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	he := h(c).(*echo.HTTPError)
@@ -59,11 +66,15 @@ func TestBasicAuth(t *testing.T) {
 	assert.Equal(basic+` realm="someRealm"`, res.Header().Get(echo.HeaderWWWAuthenticate))
 
 	// Missing Authorization header
+	res = httptest.NewRecorder()
+	c = e.NewContext(req, res)
 	req.Header.Del(echo.HeaderAuthorization)
 	he = h(c).(*echo.HTTPError)
 	assert.Equal(http.StatusUnauthorized, he.Code)
 
 	// Invalid Authorization header
+	res = httptest.NewRecorder()
+	c = e.NewContext(req, res)
 	auth = base64.StdEncoding.EncodeToString([]byte("invalid"))
 	req.Header.Set(echo.HeaderAuthorization, auth)
 	he = h(c).(*echo.HTTPError)

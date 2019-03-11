@@ -5,8 +5,8 @@ import (
 	"io"
 	"sync"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/bytes"
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/humanize/bytes"
 )
 
 type (
@@ -17,7 +17,7 @@ type (
 
 		// Maximum allowed size for a request body, it can be specified
 		// as `4x` or `4xB`, where x is one of the multiple from K, M, G, T or P.
-		Limit string `yaml:"limit"`
+		Limit string
 		limit int64
 	}
 

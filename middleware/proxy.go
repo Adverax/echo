@@ -13,7 +13,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/labstack/echo/v4"
+	"github.com/adverax/echo"
 )
 
 // TODO: Handle TLS proxy
@@ -123,7 +123,7 @@ func proxyRaw(t *ProxyTarget, c echo.Context) http.Handler {
 		go cp(in, out)
 		err = <-errCh
 		if err != nil && err != io.EOF {
-			c.Logger().Errorf("proxy raw, copy body error=%v, url=%s", t.URL, err)
+			c.Logger().Error(fmt.Sprintf("proxy raw, copy body error=%v, url=%s", t.URL, err))
 		}
 	})
 }

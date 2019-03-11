@@ -3,7 +3,7 @@ package middleware
 import (
 	"fmt"
 
-	"github.com/labstack/echo/v4"
+	"github.com/adverax/echo"
 )
 
 type (
@@ -60,12 +60,6 @@ type (
 		// have occurred instead of blocking the resource.
 		// Optional. Default value false.
 		CSPReportOnly bool `yaml:"csp_report_only"`
-
-		// HSTSPreloadEnabled will add the preload tag in the `Strict Transport Security`
-		// header, which enables the domain to be included in the HSTS preload list
-		// maintained by Chrome (and used by Firefox and Safari): https://hstspreload.org/
-		// Optional.  Default value false.
-		HSTSPreloadEnabled bool `yaml:"hsts_preload_enabled"`
 	}
 )
 
@@ -76,7 +70,6 @@ var (
 		XSSProtection:      "1; mode=block",
 		ContentTypeNosniff: "nosniff",
 		XFrameOptions:      "SAMEORIGIN",
-		HSTSPreloadEnabled: false,
 	}
 )
 
@@ -118,9 +111,6 @@ func SecureWithConfig(config SecureConfig) echo.MiddlewareFunc {
 				subdomains := ""
 				if !config.HSTSExcludeSubdomains {
 					subdomains = "; includeSubdomains"
-				}
-				if config.HSTSPreloadEnabled {
-					subdomains = fmt.Sprintf("%s; preload", subdomains)
 				}
 				res.Header().Set(echo.HeaderStrictTransportSecurity, fmt.Sprintf("max-age=%d%s", config.HSTSMaxAge, subdomains))
 			}

@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/gommon/random"
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/security"
 )
 
 type (
@@ -60,5 +60,5 @@ func RequestIDWithConfig(config RequestIDConfig) echo.MiddlewareFunc {
 }
 
 func generator() string {
-	return random.String(32)
+	return security.String(security.ALNUM, 32)
 }

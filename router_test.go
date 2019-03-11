@@ -925,9 +925,9 @@ func benchmarkRouterRoutes(b *testing.B, routes []*Route) {
 	// Find routes
 	for i := 0; i < b.N; i++ {
 		for _, route := range gitHubAPI {
-			c := e.pool.Get().(*context)
+			c := e.roots.Get().(*context)
 			r.Find(route.Method, route.Path, c)
-			e.pool.Put(c)
+			e.roots.Put(c)
 		}
 	}
 }

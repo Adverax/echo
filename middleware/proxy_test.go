@@ -7,8 +7,9 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
+
+	"github.com/adverax/echo"
 )
 
 func TestProxy(t *testing.T) {

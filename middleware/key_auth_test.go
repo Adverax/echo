@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/adverax/echo"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -44,6 +44,8 @@ func TestKeyAuth(t *testing.T) {
 	assert.Equal(http.StatusBadRequest, he.Code)
 
 	// Key from custom header
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
 	config.KeyLookup = "header:API-Key"
 	h = KeyAuthWithConfig(config)(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
@@ -52,6 +54,8 @@ func TestKeyAuth(t *testing.T) {
 	assert.NoError(h(c))
 
 	// Key from query string
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
 	config.KeyLookup = "query:key"
 	h = KeyAuthWithConfig(config)(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
@@ -62,6 +66,8 @@ func TestKeyAuth(t *testing.T) {
 	assert.NoError(h(c))
 
 	// Key from form
+	rec = httptest.NewRecorder()
+	c = e.NewContext(req, rec)
 	config.KeyLookup = "form:key"
 	h = KeyAuthWithConfig(config)(func(c echo.Context) error {
 		return c.String(http.StatusOK, "test")
