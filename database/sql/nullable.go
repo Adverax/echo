@@ -5,6 +5,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"time"
+
+	"github.com/adverax/echo/generic"
 )
 
 // NullString represents a string that may be null.
@@ -31,7 +33,7 @@ func (n *NullString) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.String, value)
+	return generic.ConvertAssign(&n.String, value)
 }
 
 func (n NullString) Value() (driver.Value, error) {
@@ -98,7 +100,7 @@ func (n *NullInt) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Int, value)
+	return generic.ConvertAssign(&n.Int, value)
 }
 
 func (n NullInt) Value() (driver.Value, error) {
@@ -165,7 +167,7 @@ func (n *NullInt8) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Int8, value)
+	return generic.ConvertAssign(&n.Int8, value)
 }
 
 func (n NullInt8) Value() (driver.Value, error) {
@@ -232,7 +234,7 @@ func (n *NullInt16) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Int16, value)
+	return generic.ConvertAssign(&n.Int16, value)
 }
 
 func (n NullInt16) Value() (driver.Value, error) {
@@ -299,7 +301,7 @@ func (n *NullInt32) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Int32, value)
+	return generic.ConvertAssign(&n.Int32, value)
 }
 
 func (n NullInt32) Value() (driver.Value, error) {
@@ -366,7 +368,7 @@ func (n *NullInt64) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Int64, value)
+	return generic.ConvertAssign(&n.Int64, value)
 }
 
 func (n NullInt64) Value() (driver.Value, error) {
@@ -433,7 +435,7 @@ func (n *NullUint) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Uint, value)
+	return generic.ConvertAssign(&n.Uint, value)
 }
 
 func (n NullUint) Value() (driver.Value, error) {
@@ -500,7 +502,7 @@ func (n *NullUint8) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Uint8, value)
+	return generic.ConvertAssign(&n.Uint8, value)
 }
 
 func (n NullUint8) Value() (driver.Value, error) {
@@ -567,7 +569,7 @@ func (n *NullUint16) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Uint16, value)
+	return generic.ConvertAssign(&n.Uint16, value)
 }
 
 func (n NullUint16) Value() (driver.Value, error) {
@@ -634,7 +636,7 @@ func (n *NullUint32) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Uint32, value)
+	return generic.ConvertAssign(&n.Uint32, value)
 }
 
 func (n NullUint32) Value() (driver.Value, error) {
@@ -701,7 +703,7 @@ func (n *NullUint64) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Uint64, value)
+	return generic.ConvertAssign(&n.Uint64, value)
 }
 
 func (n NullUint64) Value() (driver.Value, error) {
@@ -768,7 +770,7 @@ func (n *NullFloat64) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Float64, value)
+	return generic.ConvertAssign(&n.Float64, value)
 }
 
 func (n NullFloat64) Value() (driver.Value, error) {
@@ -835,7 +837,7 @@ func (n *NullBool) Scan(value interface{}) error {
 		return nil
 	}
 	n.Valid = true
-	return ConvertAssign(&n.Bool, value)
+	return generic.ConvertAssign(&n.Bool, value)
 }
 
 func (n NullBool) Value() (driver.Value, error) {

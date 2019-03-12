@@ -1,7 +1,23 @@
+// Copyright 2019 Adverax. All Rights Reserved.
+// This file is part of project
+//
+//      http://github.com/adverax/echo
+//
+// Licensed under the MIT (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://github.com/adverax/echo/blob/master/LICENSE
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package sql
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -54,19 +70,18 @@ func (adapter *mySqlAdater) MakeConnectionString(dsn *DSN) string {
 }
 
 func (adapter *mySqlAdater) DatabaseName(
-	ctx context.Context,
 	db DB,
 ) (name string, err error) {
 	const query = "SELECT database()"
-	err = db.QueryRow(ctx, query).Scan(&name)
+	err = db.QueryRow(query).Scan(&name)
 	return
 }
 
 // Lock database latch with context
-func (adapter *mySqlAdater) LockLocal(ctx context.Context, tx Tx, latch string, timeout int) error {
+func (adapter *mySqlAdater) LockLocal(tx Tx, latch string, timeout int) error {
 	var res int
 	query := "SELECT GET_LOCK(CONCAT(DATABASE(), '.', ?), ?)"
-	err := tx.QueryRow(ctx, query, latch, timeout).Scan(&res)
+	err := tx.QueryRow(query, latch, timeout).Scan(&res)
 	if err != nil {
 		return err
 	}
@@ -77,9 +92,9 @@ func (adapter *mySqlAdater) LockLocal(ctx context.Context, tx Tx, latch string, 
 }
 
 // Unlock database with context
-func (adapter *mySqlAdater) UnlockLocal(ctx context.Context, tx Tx, latch string) error {
+func (adapter *mySqlAdater) UnlockLocal(tx Tx, latch string) error {
 	var res NullInt64
-	err := tx.QueryRow(ctx, "SELECT RELEASE_LOCK(CONCAT(DATABASE(), '.', ?))", latch).Scan(&res)
+	err := tx.QueryRow("SELECT RELEASE_LOCK(CONCAT(DATABASE(), '.', ?))", latch).Scan(&res)
 	if err != nil {
 		return err
 	}
@@ -91,6 +106,37 @@ func (adapter *mySqlAdater) UnlockLocal(ctx context.Context, tx Tx, latch string
 	}
 	return nil
 }
+
+// Lock database latch with context
+func (adapter *mySqlAdater) LockGlobal(tx Tx, latch string, timeout int) error {
+	var res int
+	query := "SELECT GET_LOCK(?, ?)"
+	err := tx.QueryRow(query, latch, timeout).Scan(&res)
+	if err != nil {
+		return err
+	}
+	if res != 1 {
+		return ErrCaptureLock
+	}
+	return nil
+}
+
+// Unlock database with context
+func (adapter *mySqlAdater) UnlockGlobal(tx Tx, latch string) error {
+	var res NullInt64
+	err := tx.QueryRow("SELECT RELEASE_LOCK(?)", latch).Scan(&res)
+	if err != nil {
+		return err
+	}
+	if !res.Valid {
+		return ErrReleaseInvalid
+	}
+	if res.Int64 == 0 {
+		return ErrReleaseLock
+	}
+	return nil
+}
+
 func init() {
 	Register("mysql", &mySqlAdater{})
 }

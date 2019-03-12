@@ -1,3 +1,20 @@
+// Copyright 2019 Adverax. All Rights Reserved.
+// This file is part of project
+//
+//      http://github.com/adverax/echo
+//
+// Licensed under the MIT (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://github.com/adverax/echo/blob/master/LICENSE
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package sql
 
 import (
@@ -27,64 +44,53 @@ func scatter(n int, fn func(i int) error) error {
 	return err
 }
 
-// Lock database latch with context
-func LockGlobal(ctx context.Context, tx Tx, latch string, timeout int) error {
-	var res int
-	query := "SELECT GET_LOCK(?, ?)"
-	err := tx.QueryRow(ctx, query, latch, timeout).Scan(&res)
-	if err != nil {
-		return err
-	}
-	if res != 1 {
-		return ErrCaptureLock
-	}
-	return nil
-}
-
-// Unlock database with context
-func UnlockGlobal(ctx context.Context, tx Tx, latch string) error {
-	var res NullInt64
-	err := tx.QueryRow(ctx, "SELECT RELEASE_LOCK(?)", latch).Scan(&res)
-	if err != nil {
-		return err
-	}
-	if !res.Valid {
-		return ErrReleaseInvalid
-	}
-	if res.Int64 == 0 {
-		return ErrReleaseLock
-	}
-	return nil
-}
-
 // Extract database context from context
-func FromContext(ctx context.Context, key ReactorType) Reactor {
+func FromContext(ctx context.Context, key ReactorType) Scope {
 	val := ctx.Value(key)
-	if c, valid := val.(Reactor); valid {
+	if c, valid := val.(Scope); valid {
 		return c
 	}
 	return nil
 }
 
-// Append database context into context
-func WithContext(
+// Append scope into context
+func ToContext(
 	ctx context.Context,
-	reactor Reactor,
+	scope Scope,
 ) context.Context {
-	return context.WithValue(ctx, reactor.Type(), reactor)
+	return context.WithValue(ctx, scope.Type(), scope)
 }
 
 func Heartbeart(
 	ctx context.Context,
 	db DB,
 	interval time.Duration,
-) {
+) error {
 	for {
 		select {
 		case <-ctx.Done():
-			return
+			return ctx.Err()
 		case <-time.After(interval):
-			db.Ping()
+			if err := db.Ping(); err != nil {
+				return err
+			}
 		}
 	}
+}
+
+// Exclusive open database for escape any concurrency.
+func (dsc DSC) OpenForTest(
+	ctx context.Context,
+) DB {
+	dsn := dsc.Primary()
+	dsn.Database += "_test"
+	db, err := dsn.Open(
+		dsc.Driver,
+		OpenExclusive(0x7ffffff, nil),
+	)
+	if err != nil {
+		panic(err)
+	}
+
+	return db
 }

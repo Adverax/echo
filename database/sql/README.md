@@ -1,31 +1,41 @@
-# Nap
-
-Nap is a library that abstracts access to master-slave physical SQL servers topologies as a single logical database mimicking the standard `sql.DB` APIs.
-
-## Install
-```shell
-$ go get github.com/tsenart/nap
-```
+## Features
+* There is a wrapper over the standard  database/sql library.
+* Allows you to work through Scope, while hiding the differences between the database and the transaction.
+* Allows you to transparently pass Scope through Context.
+* Allows transparent work with replicas.
+* Supports metrics.
+* Supports nested transactions.
+* Works with various databases (just provide the appropriate adapter).
 
 ## Usage
 ```go
 package main
 
 import (
-  "log"
+	"fmt"
+    "log"
 
-  "github.com/tsenart/nap"
-  _ "github.com/go-sql-driver/mysql" // Any sql.DB works
+    "github.com/adverax/echo/database/sql"
+    _ "github.com/go-sql-driver/mysql" // Any sql.DB works
 )
 
 func main() {
   // The first DSN is assumed to be the master and all
   // other to be slaves
-  dsns := "tcp://user:password@master/dbname;"
-  dsns += "tcp://user:password@slave01/dbname;"
-  dsns += "tcp://user:password@slave02/dbname"
+  dsc := &sql.DSC{
+  	Driver: "mysql",
+  	DSN: []*sql.DSN{
+      {
+        Host: "127.0.0.1",
+        Database: "echo",
+        Username: "root",
+        Password: "password",
+      },
+  	},
+  }
 
-  db, err := nap.Open("mysql", dsns)
+  // Use real tracer in next sentence
+  db, err := dsc.Open(sql.OpenWithProfiler(nil, "", nil))
   if err != nil {
     log.Fatal(err)
   }
@@ -45,7 +55,7 @@ func main() {
 
   // Write queries are directed to the master with Exec.
   // Always use Exec for INSERTS, UPDATES
-  err = db.Exec("UPDATE sometable SET something = 1")
+  _, err = db.Exec("UPDATE sometable SET something = 1")
   if err != nil {
     log.Fatal(err)
   }
@@ -59,9 +69,12 @@ func main() {
   if err != nil {
     log.Fatal(err)
   }
+  if _, err := stmt.Exec(); err != nil {
+  	log.Fatal(err)
+  }
 
   // Transactions always use the master
-  tx, err := db.Begin()
+  tx, err := db.Begin(nil)
   if err != nil {
     log.Fatal(err)
   }
@@ -72,16 +85,11 @@ func main() {
 
   // If needed, one can access the master or a slave explicitly.
   master, slave := db.Master(), db.Slave()
+  fmt.Println(master.Adapter().DatabaseName(master))
+  fmt.Println(slave.Adapter().DatabaseName(slave))
 }
 ```
 
 ## Todo
 * Support other slave load balancing algorithms.
-
-## License
-See [LICENSE](LICENSE)
-
-## Failover
-При возникновении ошибки соединения на ведомом узле, необходимо исключить
-ведомый узел на определенное время (на 5 минут).
-Через определенное время можно протестировать соединение и добавить его в список доступных соединений.
+* Support failovers.

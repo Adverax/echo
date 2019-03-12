@@ -1,3 +1,20 @@
+// Copyright 2019 Adverax. All Rights Reserved.
+// This file is part of project
+//
+//      http://github.com/adverax/echo
+//
+// Licensed under the MIT (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://github.com/adverax/echo/blob/master/LICENSE
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package sql
 
 import (
@@ -10,15 +27,9 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-)
 
-type DS struct {
-	Host     string `json:"host"`     // Host address
-	Port     uint16 `json:"port"`     // Host port
-	Database string `json:"database"` // Database name
-	Username string `json:"username"` // User name
-	Password string `json:"password"` // User password
-}
+	"github.com/adverax/echo/generic"
+)
 
 // Single dataSource node
 type DSN struct {
@@ -28,37 +39,6 @@ type DSN struct {
 	Username string            `json:"username"` // User name
 	Password string            `json:"password"` // User password
 	Params   map[string]string `json:"params"`   // Other parameters
-}
-
-type Adapter interface {
-	// Get driver name
-	Driver() string
-	//Get database name
-	DatabaseName(ctx context.Context, db DB) (name string, err error)
-	// Make connection string for open database
-	MakeConnectionString(dsn *DSN) string
-	// Check error for deadlock criteria
-	IsDeadlock(db DB, err error) bool
-	// Acquire local lock
-	LockLocal(ctx context.Context, tx Tx, latch string, timeout int) error
-	// Release local lock
-	UnlockLocal(ctx context.Context, tx Tx, latch string) error
-}
-
-type adapterRegistry map[string]Adapter
-
-func (registry adapterRegistry) find(driver string) (Adapter, error) {
-	if adapter, ok := registry[driver]; ok {
-		return adapter, nil
-	}
-
-	return nil, ErrUnknownDriver
-}
-
-var adapters = make(adapterRegistry, 8)
-
-func Register(driver string, adapter Adapter) {
-	adapters[driver] = adapter
 }
 
 func (dsn *DSN) AddParam(key string, value string) {
@@ -72,12 +52,10 @@ func (dsn *DSN) AddParam(key string, value string) {
 }
 
 func (dsn *DSN) Open(
-	ctx context.Context,
 	driver string,
 	activator Activator,
 ) (DB, error) {
 	return Open(
-		ctx,
 		DSC{
 			Driver: driver,
 			DSN:    []*DSN{dsn},
@@ -104,10 +82,10 @@ func (dsn *DSN) openSQL(driver string) (*sql.DB, Adapter, error) {
 type DSC struct {
 	Driver string      `json:"Driver"`
 	Type   ReactorType `json:"-"`
-	DSN    []*DSN
+	DSN    []*DSN      `json:"dsn"`
 }
 
-func (dsc DSC) Primary() DSN {
+func (dsc *DSC) Primary() DSN {
 	if len(dsc.DSN) == 0 {
 		return DSN{}
 	}
@@ -115,7 +93,7 @@ func (dsc DSC) Primary() DSN {
 	return *dsc.DSN[0]
 }
 
-func (dsc DSC) String() (string, error) {
+func (dsc *DSC) String() (string, error) {
 	adapter, err := adapters.find(dsc.Driver)
 	if err != nil {
 		return "", err
@@ -125,32 +103,51 @@ func (dsc DSC) String() (string, error) {
 	for i, dsn := range dsc.DSN {
 		list[i] = adapter.MakeConnectionString(dsn)
 	}
+
 	return strings.Join(list, ";"), nil
 }
 
-func (dsc DSC) Open(
-	ctx context.Context,
+func (dsc *DSC) Open(
 	activator Activator,
 ) (DB, error) {
-	return Open(ctx, dsc, activator)
+	return Open(*dsc, activator)
 }
 
-// Exclusive open database for escape any concurrency.
-func (dsc DSC) OpenForTest(
-	ctx context.Context,
-) DB {
-	dsn := dsc.Primary()
-	dsn.Database += "_test"
-	db, err := dsn.Open(
-		ctx,
-		dsc.Driver,
-		OpenExclusive(ctx, 0x7ffffff, nil),
-	)
-	if err != nil {
-		panic(err)
+type Adapter interface {
+	// Get driver name
+	Driver() string
+	//Get database name
+	DatabaseName(db DB) (name string, err error)
+	// Make connection string for open database
+	MakeConnectionString(dsn *DSN) string
+	// Check error for deadlock criteria
+	IsDeadlock(db DB, err error) bool
+	// Acquire local lock
+	LockLocal(tx Tx, latch string, timeout int) error
+	// Release local lock
+	UnlockLocal(tx Tx, latch string) error
+	// Acquire local lock
+	LockGlobal(tx Tx, latch string, timeout int) error
+	// Release local lock
+	UnlockGlobal(tx Tx, latch string) error
+}
+
+type Activator func(dsc DSC) (DB, error)
+
+type adapterRegistry map[string]Adapter
+
+func (registry adapterRegistry) find(driver string) (Adapter, error) {
+	if adapter, ok := registry[driver]; ok {
+		return adapter, nil
 	}
 
-	return db
+	return nil, ErrUnknownDriver
+}
+
+var adapters = make(adapterRegistry, 8)
+
+func Register(driver string, adapter Adapter) {
+	adapters[driver] = adapter
 }
 
 // IsolationLevel is the transaction isolation level used in TxOptions.
@@ -210,7 +207,7 @@ func (metrics *Metrics) endTransact(started int64) {
 	atomic.AddInt64(&metrics.Transact.Time, time.Now().UnixNano()-started)
 }
 
-func (metrics *Metrics) Metrics() Metrics {
+func (metrics *Metrics) GetMetrics() Metrics {
 	return Metrics{
 		Query: HalfMetrics{
 			Count: atomic.LoadInt32(&metrics.Query.Count),
@@ -227,12 +224,9 @@ func (metrics *Metrics) Metrics() Metrics {
 	}
 }
 
-func (metrics *Metrics) Audit(
-	ctx context.Context,
-	auditor interface{},
-) error {
+func (metrics *Metrics) Audit(auditor interface{}) error {
 	if a, ok := auditor.(Auditor); ok {
-		return a.AuditDatabase(metrics.Metrics())
+		return a.AuditDatabase(metrics.GetMetrics())
 	}
 	return nil
 }
@@ -244,16 +238,17 @@ type Auditor interface {
 // TxOptions holds the transaction options to be used in DB.BeginTx.
 type TxOptions = sql.TxOptions
 
-// Reactor is base interface of DB and Tx
-type Reactor interface {
-	Begin(ctx context.Context, opts *TxOptions) (Tx, error)
-	Exec(ctx context.Context, query string, args ...interface{}) (Result, error)
-	Query(ctx context.Context, query string, args ...interface{}) (Rows, error)
-	QueryRow(ctx context.Context, query string, args ...interface{}) Row
+// Scope is abstract processor
+type Scope interface {
+	Begin(opts *TxOptions) (Tx, error)
+	Exec(query string, args ...interface{}) (Result, error)
+	Query(query string, args ...interface{}) (Rows, error)
+	QueryRow(query string, args ...interface{}) Row
 	Type() ReactorType
 	Adapter() Adapter
 }
 
+// Composer is interface for coordinate threads
 type Composer interface {
 	Add(delta int)
 	Done()
@@ -280,21 +275,21 @@ func (composer *composer) Abort() <-chan struct{} {
 // forming a single master multiple slaves topology.
 // Reads and writes are automatically directed to the correct physical db.
 type DB interface {
-	Reactor
+	Scope
 	Composer
-	Close(ctx context.Context) error
+	Close() error
 	Driver() driver.Driver
 	Ping() error
 	Slave() DB
 	Master() DB
-	Prepare(ctx context.Context, query string) (Stmt, error)
+	Prepare(query string) (Stmt, error)
 	SetMaxIdleConns(n int)
 	SetMaxOpenConns(n int)
 	SetConnMaxLifetime(d time.Duration)
 	IsCluster() bool
 	ReactorType() ReactorType
-	Metrics() Metrics
-	Audit(ctx context.Context, auditor interface{}) error
+	GetMetrics() Metrics
+	Audit(auditor interface{}) error
 	Interface(detective func(interface{}) interface{}) (interface{}, bool)
 	DSC() DSC
 	beginQuery() int64
@@ -306,30 +301,14 @@ type DB interface {
 }
 
 // Scanner is an interface used by Scan.
-type Scanner interface {
-	// Scan assigns a value from a database driver.
-	//
-	// The src value will be of one of the following types:
-	//
-	//    int64
-	//    float64
-	//    bool
-	//    []byte
-	//    string
-	//    time.Time
-	//    nil - for NULL values
-	//
-	// An error should be returned if the value cannot be stored
-	// without loss of information.
-	Scan(src interface{}) error
-}
+type Scanner = sql.Scanner
 
 // Transaction
 type Tx interface {
-	Reactor
+	Scope
 	Level() int16
-	Commit(ctx context.Context) error
-	Rollback(ctx context.Context) error
+	Commit() error
+	Rollback() error
 }
 
 // Abstract row fetcher
@@ -344,7 +323,7 @@ type Arrays []Array
 
 func (a Array) Scan(dest ...interface{}) error {
 	for i, d := range dest {
-		err := ConvertAssign(d, a[i])
+		err := generic.ConvertAssign(d, a[i])
 		if err != nil {
 			return err
 		}
@@ -464,68 +443,14 @@ func (res *result) RowsAffected() (int64, error) {
 	return r, nil
 }
 
-// Open concurrently opens each underlying physical db.
-// dataSourceNames must be a semi-comma separated list of DSNs with the first
-// one being used as the master and the rest as slaves.
-func open(
-	dsc DSC,
-	reactorType ReactorType,
-) (DB, error) {
-	if reactorType == 0 {
-		reactorType = PrimaryReactor
-	}
-
-	if len(dsc.DSN) == 1 {
-		db, adapter, err := dsc.DSN[0].openSQL(dsc.Driver)
-		if err != nil {
-			return nil, err
-		}
-		return &database1{
-			db:          db,
-			dsc:         dsc,
-			adapter:     adapter,
-			reactorType: reactorType,
-			composer:    composer{stop: make(chan struct{})},
-			Metrics:     new(Metrics),
-		}, nil
-	}
-
-	adapter, err := adapters.find(dsc.Driver)
-	if err != nil {
-		return nil, err
-	}
-
-	db := &database2{
-		pdbs:        make([]*sql.DB, len(dsc.DSN)),
-		dsc:         dsc,
-		reactorType: reactorType,
-		adapter:     adapter,
-		composer:    composer{stop: make(chan struct{})},
-		Metrics:     new(Metrics),
-	}
-
-	err = scatter(
-		len(db.pdbs),
-		func(i int) (err error) {
-			db.pdbs[i], _, err = dsc.DSN[0].openSQL(dsc.Driver)
-			return err
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return db, nil
-}
-
 // Wrapper for physical database
 type database1 struct {
 	db          *sql.DB
 	dsc         DSC
 	reactorType ReactorType
 	adapter     Adapter
-	composer
 	*Metrics
+	composer
 }
 
 func (db *database1) DSC() DSC {
@@ -541,7 +466,7 @@ func (db *database1) Adapter() Adapter {
 }
 
 // Close closes all physical databases concurrently, releasing any open resources.
-func (db *database1) Close(ctx context.Context) error {
+func (db *database1) Close() error {
 	db.composer.Close()
 	return db.db.Close()
 }
@@ -552,10 +477,10 @@ func (db *database1) Driver() driver.Driver {
 }
 
 // Begin starts a transaction on the master. The isolation level is dependent on the driver.
-func (db *database1) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
+func (db *database1) Begin(opts *TxOptions) (Tx, error) {
 	started := db.beginTransact()
 
-	t, err := db.db.BeginTx(ctx, nil)
+	t, err := db.db.Begin()
 	if err != nil {
 		return nil, err
 	}
@@ -566,9 +491,9 @@ func (db *database1) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
 // Exec executes a query without returning any rows.
 // The args are for any named parameters in the query.
 // Exec uses the master as the underlying physical db.
-func (db *database1) Exec(ctx context.Context, query string, args ...interface{}) (Result, error) {
+func (db *database1) Exec(query string, args ...interface{}) (Result, error) {
 	started := db.beginExec()
-	res, err := db.db.ExecContext(ctx, query, args...)
+	res, err := db.db.Exec(query, args...)
 	db.endExec(started)
 	if err != nil {
 		return nil, err
@@ -578,8 +503,8 @@ func (db *database1) Exec(ctx context.Context, query string, args ...interface{}
 
 // Prepare creates a prepared statement for later queries or executions
 // on each physical database, concurrently.
-func (db *database1) Prepare(ctx context.Context, query string) (Stmt, error) {
-	s, err := db.db.PrepareContext(ctx, query)
+func (db *database1) Prepare(query string) (Stmt, error) {
+	s, err := db.db.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
@@ -590,9 +515,9 @@ func (db *database1) Prepare(ctx context.Context, query string) (Stmt, error) {
 // Query executes a query that returns rows, typically a SELECT.
 // The args are for any parameters in the query.
 // Query uses a slave as the physical db.
-func (db *database1) Query(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+func (db *database1) Query(query string, args ...interface{}) (Rows, error) {
 	started := db.beginQuery()
-	rs, err := db.db.QueryContext(ctx, query, args...)
+	rs, err := db.db.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -603,9 +528,9 @@ func (db *database1) Query(ctx context.Context, query string, args ...interface{
 // QueryRow always return a non-nil value.
 // Errors are deferred until Row's Scan method is called.
 // QueryRow uses a slave as the physical db.
-func (db *database1) QueryRow(ctx context.Context, query string, args ...interface{}) Row {
+func (db *database1) QueryRow(query string, args ...interface{}) Row {
 	started := db.beginQuery()
-	r := db.db.QueryRowContext(ctx, query, args...)
+	r := db.db.QueryRow(query, args...)
 	db.endQuery(started)
 	return &row{db: db, r: r}
 }
@@ -677,8 +602,8 @@ type database2 struct {
 	count       uint64 // Monotonically incrementing counter on each query
 	reactorType ReactorType
 	adapter     Adapter
-	composer
 	*Metrics
+	composer
 }
 
 func (db *database2) DSC() DSC {
@@ -694,7 +619,7 @@ func (db *database2) Adapter() Adapter {
 }
 
 // Close closes all physical databases concurrently, releasing any open resources.
-func (db *database2) Close(ctx context.Context) error {
+func (db *database2) Close() error {
 	db.composer.Close()
 	return scatter(
 		len(db.pdbs),
@@ -711,10 +636,10 @@ func (db *database2) Driver() driver.Driver {
 }
 
 // Begin starts a transaction on the master. The isolation level is dependent on the driver.
-func (db *database2) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
+func (db *database2) Begin(opts *TxOptions) (Tx, error) {
 	started := db.beginTransact()
 
-	t, err := db.pdbs[0].BeginTx(ctx, opts)
+	t, err := db.pdbs[0].BeginTx(context.Background(), opts)
 	if err != nil {
 		return nil, err
 	}
@@ -725,9 +650,9 @@ func (db *database2) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
 // Exec executes a query without returning any rows.
 // The args are for any named parameters in the query.
 // Exec uses the master as the underlying physical db.
-func (db *database2) Exec(ctx context.Context, query string, args ...interface{}) (Result, error) {
+func (db *database2) Exec(query string, args ...interface{}) (Result, error) {
 	started := db.beginExec()
-	res, err := db.pdbs[0].ExecContext(ctx, query, args...)
+	res, err := db.pdbs[0].Exec(query, args...)
 	db.endExec(started)
 	if err != nil {
 		return nil, err
@@ -749,13 +674,13 @@ func (db *database2) Ping() error {
 
 // Prepare creates a prepared statement for later queries or executions
 // on each physical database, concurrently.
-func (db *database2) Prepare(ctx context.Context, query string) (Stmt, error) {
+func (db *database2) Prepare(query string) (Stmt, error) {
 	stmts := make([]*sql.Stmt, len(db.pdbs))
 
 	err := scatter(
 		len(db.pdbs),
 		func(i int) (err error) {
-			stmts[i], err = db.pdbs[i].PrepareContext(ctx, query)
+			stmts[i], err = db.pdbs[i].Prepare(query)
 			return err
 		},
 	)
@@ -770,9 +695,9 @@ func (db *database2) Prepare(ctx context.Context, query string) (Stmt, error) {
 // Query executes a query that returns rows, typically a SELECT.
 // The args are for any parameters in the query.
 // Query uses a slave as the physical db.
-func (db *database2) Query(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+func (db *database2) Query(query string, args ...interface{}) (Rows, error) {
 	started := db.beginQuery()
-	rs, err := db.pdbs[db.slave(len(db.pdbs))].QueryContext(ctx, query, args...)
+	rs, err := db.pdbs[db.slave(len(db.pdbs))].Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -783,9 +708,9 @@ func (db *database2) Query(ctx context.Context, query string, args ...interface{
 // QueryRow always return a non-nil value.
 // Errors are deferred until Row's Scan method is called.
 // QueryRow uses a slave as the physical db.
-func (db *database2) QueryRow(ctx context.Context, query string, args ...interface{}) Row {
+func (db *database2) QueryRow(query string, args ...interface{}) Row {
 	started := db.beginQuery()
-	r := db.pdbs[db.slave(len(db.pdbs))].QueryRowContext(ctx, query, args...)
+	r := db.pdbs[db.slave(len(db.pdbs))].QueryRow(query, args...)
 	db.endQuery(started)
 	return &row{db: db, r: r}
 }
@@ -879,17 +804,17 @@ func (t *tx) Level() int16 {
 	return t.level
 }
 
-func (t *tx) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
+func (t *tx) Begin(opts *TxOptions) (Tx, error) {
 	res := &txx{tx{db: t.db, trans: t.trans, level: t.level + 1}, true}
 	query := "SAVEPOINT " + res.getSavePoint()
-	_, err := t.Exec(ctx, query)
+	_, err := t.Exec(query)
 	if err != nil {
 		return nil, err
 	}
 	return res, nil
 }
 
-func (t *tx) Commit(ctx context.Context) error {
+func (t *tx) Commit() error {
 	err := t.trans.Commit()
 	t.db.endTransact(t.started)
 	if err != nil {
@@ -898,7 +823,7 @@ func (t *tx) Commit(ctx context.Context) error {
 	return nil
 }
 
-func (t *tx) Rollback(ctx context.Context) error {
+func (t *tx) Rollback() error {
 	err := t.trans.Rollback()
 	if err != nil {
 		return err
@@ -906,9 +831,9 @@ func (t *tx) Rollback(ctx context.Context) error {
 	return nil
 }
 
-func (t *tx) Exec(ctx context.Context, query string, args ...interface{}) (Result, error) {
+func (t *tx) Exec(query string, args ...interface{}) (Result, error) {
 	started := t.db.beginExec()
-	res, err := t.trans.ExecContext(ctx, query, args...)
+	res, err := t.trans.Exec(query, args...)
 	t.db.endExec(started)
 	if err != nil {
 		return nil, err
@@ -916,18 +841,18 @@ func (t *tx) Exec(ctx context.Context, query string, args ...interface{}) (Resul
 	return &result{db: t.db, res: res}, nil
 }
 
-func (t *tx) Query(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+func (t *tx) Query(query string, args ...interface{}) (Rows, error) {
 	started := t.db.beginQuery()
-	rs, err := t.trans.QueryContext(ctx, query, args...)
+	rs, err := t.trans.Query(query, args...)
 	if err != nil {
 		return nil, err
 	}
 	return &rows{db: t.db, rs: rs, started: started}, nil
 }
 
-func (t *tx) QueryRow(ctx context.Context, query string, args ...interface{}) Row {
+func (t *tx) QueryRow(query string, args ...interface{}) Row {
 	started := t.db.beginQuery()
-	r := t.trans.QueryRowContext(ctx, query, args...)
+	r := t.trans.QueryRow(query, args...)
 	t.db.endQuery(started)
 	return &row{db: t.db, r: r}
 }
@@ -949,26 +874,26 @@ func (t *txx) Adapter() Adapter {
 	return t.db.Adapter()
 }
 
-func (t *txx) Commit(ctx context.Context) error {
+func (t *txx) Commit() error {
 	if !t.active {
 		return ErrTxDone
 	}
 	t.active = false
 	query := "RELEASE SAVEPOINT " + t.getSavePoint()
-	_, err := t.Exec(ctx, query)
+	_, err := t.Exec(query)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (t *txx) Rollback(ctx context.Context) error {
+func (t *txx) Rollback() error {
 	if !t.active {
 		return ErrTxDone
 	}
 	t.active = false
 	query := "ROLLBACK TO SAVEPOINT " + t.getSavePoint()
-	_, err := t.Exec(ctx, query)
+	_, err := t.Exec(query)
 	if err != nil {
 		return err
 	}
@@ -985,11 +910,11 @@ var (
 )
 
 type Repository interface {
-	Reactor(ctx context.Context) Reactor
+	Scope(ctx context.Context) Scope
 	Database() DB
 	Transaction(
 		ctx context.Context,
-		action func(ctx context.Context, reactor Reactor) error,
+		action func(ctx context.Context, scope Scope) error,
 	) error
 }
 
@@ -1002,9 +927,9 @@ func (repository *repository) Database() DB {
 	return repository.db
 }
 
-func (repository *repository) Reactor(
+func (repository *repository) Scope(
 	ctx context.Context,
-) Reactor {
+) Scope {
 	db := FromContext(ctx, repository.reactorKey)
 	if db != nil {
 		return db
@@ -1014,7 +939,7 @@ func (repository *repository) Reactor(
 
 func (repository *repository) Transaction(
 	ctx context.Context,
-	action func(ctx context.Context, reactor Reactor) error,
+	action func(ctx context.Context, scope Scope) error,
 ) (err error) {
 	for i := 0; i < 100; i++ {
 		err = repository.transaction(ctx, action)
@@ -1032,20 +957,20 @@ func (repository *repository) Transaction(
 
 func (repository *repository) transaction(
 	ctx context.Context,
-	action func(ctx context.Context, reactor Reactor) error,
+	action func(ctx context.Context, scope Scope) error,
 ) error {
-	reactor, err := repository.Reactor(ctx).Begin(ctx, nil)
+	scope, err := repository.Scope(ctx).Begin(nil)
 	if err != nil {
 		return err
 	}
-	defer reactor.Rollback(ctx)
+	defer scope.Rollback()
 
-	err = action(WithContext(ctx, reactor), reactor)
+	err = action(ToContext(ctx, scope), scope)
 	if err != nil {
 		return err
 	}
 
-	return reactor.Commit(ctx)
+	return scope.Commit()
 }
 
 func NewRepository(db DB) Repository {
@@ -1056,61 +981,3 @@ func NewRepository(db DB) Repository {
 }
 
 // todo: Handle failovers on slaves
-
-/*
-Позволяет работать с транзакциями (в том числе и вложенными)
-Позволяет инкапсулировать контекст исполнения.
-Работа с репликацией
-Обработка ошибок
-Поддержка оберток (профилирование)
-Метрики
-*/
-
-/*
-Реактор заменить на ?
-Удалить контекст везде, кроме репозитория для захвата реактора.
-
-  repository.with(ctx)
-
-context
-
-reactor
-tests
-
-*/
-/*func (dsn *DSN) String(driver string) (string, error) {
-	if adapter, ok := adapters[driver]; ok {
-		return adapter.MakeConnectionString(dsn), nil
-	}
-	return "", ErrUnknownDriver
-}*/
-func NewDSC(
-	driver string,
-	reactorType ReactorType,
-	dbs []DSN,
-) DSC {
-	var dsns []*DSN
-	for _, db := range dbs {
-		params := make(map[string]string)
-		for key, val := range db.Params {
-			params[key] = val
-		}
-		dsns = append(
-			dsns,
-			&DSN{
-				Host:     db.Host,
-				Port:     db.Port,
-				Database: db.Database,
-				Username: db.Username,
-				Password: db.Password,
-				Params:   params,
-			},
-		)
-	}
-
-	return DSC{
-		Driver: driver,
-		Type:   reactorType,
-		DSN:    dsns,
-	}
-}

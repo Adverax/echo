@@ -1,20 +1,33 @@
+// Copyright 2019 Adverax. All Rights Reserved.
+// This file is part of project
+//
+//      http://github.com/adverax/echo
+//
+// Licensed under the MIT (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://github.com/adverax/echo/blob/master/LICENSE
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package sql
 
 import (
-	"context"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
 )
 
-const latchTest = "debug.test"
-
-type Informer interface {
+type Tracer interface {
 	// Profiler secondary information (skip in production)
 	Trace(msg interface{})
 }
-
-type Activator func(ctx context.Context, dsc DSC) (DB, error)
 
 // Exclusive database used for exclusive capture database.
 // It used latch with database name.
@@ -25,30 +38,27 @@ type exclusiveDatabase struct {
 	dbname string
 }
 
-func (wrapper *exclusiveDatabase) Close(
-	ctx context.Context,
-) error {
-	err := wrapper.DB.Close(ctx)
+func (wrapper *exclusiveDatabase) Close() error {
+	err := wrapper.DB.Close()
 	if err != nil {
 		return err
 	}
 
-	err = UnlockGlobal(ctx, wrapper.tx, wrapper.dbname)
+	err = wrapper.DB.Adapter().UnlockGlobal(wrapper.tx, wrapper.dbname)
 	if err != nil {
 		return err
 	}
 
-	return wrapper.tx.Rollback(ctx)
+	return wrapper.tx.Rollback()
 }
 
 // Open exclusive access for required database
 // If control is not null, than for latch opens with heartbeard.
 func OpenExclusive(
-	ctx context.Context,
 	timeout int, // seconds
 	activator Activator,
 ) Activator {
-	return func(ctx context.Context, dsc DSC) (DB, error) {
+	return func(dsc DSC) (DB, error) {
 		dsn := dsc.Primary()
 		dbname := dsn.Database
 		dsn.Database = ""
@@ -59,21 +69,21 @@ func OpenExclusive(
 			nil,
 		)*/
 
-		db, err := Open(ctx, dsc, activator)
+		db, err := Open(dsc, activator)
 		if err != nil {
 			return nil, err
 		}
 
 		defer func() {
-			CloseOnError(ctx, db, err)
+			CloseOnError(db, err)
 		}()
 
-		tx, err := db.Begin(ctx, nil)
+		tx, err := db.Begin(nil)
 		if err != nil {
 			return nil, err
 		}
 
-		err = LockGlobal(ctx, tx, dbname, timeout)
+		err = tx.Adapter().LockGlobal(tx, dbname, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -91,8 +101,8 @@ type profiler interface {
 }
 
 type profilerMngr struct {
-	informer Informer
-	indent   string
+	Tracer
+	indent string
 }
 
 func (profiler *profilerMngr) finished(
@@ -117,7 +127,7 @@ func (profiler *profilerMngr) finished(
 	}
 
 	msg = strings.Replace(msg, "\n", "\n"+profiler.indent, -1)
-	profiler.informer.Trace(msg)
+	profiler.Trace(msg)
 }
 
 // profiler database profilering text of sql queries.
@@ -127,9 +137,9 @@ type profilerDB struct {
 	profiler
 }
 
-func (db *profilerDB) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
+func (db *profilerDB) Begin(opts *TxOptions) (Tx, error) {
 	org := time.Now()
-	tx, err := db.DB.Begin(ctx, opts)
+	tx, err := db.DB.Begin(opts)
 	db.finished("START TRANSACTION", nil, org)
 	if err != nil {
 		return nil, err
@@ -137,31 +147,31 @@ func (db *profilerDB) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
 	return &profilerTx{Tx: tx, profiler: db}, nil
 }
 
-func (db *profilerDB) Prepare(ctx context.Context, query string) (Stmt, error) {
-	stmt, err := db.DB.Prepare(ctx, query)
+func (db *profilerDB) Prepare(query string) (Stmt, error) {
+	stmt, err := db.DB.Prepare(query)
 	if err != nil {
 		return nil, err
 	}
 	return &profilerStmt{Stmt: stmt, profiler: db, query: query}, nil
 }
 
-func (db *profilerDB) Exec(ctx context.Context, query string, args ...interface{}) (Result, error) {
+func (db *profilerDB) Exec(query string, args ...interface{}) (Result, error) {
 	org := time.Now()
-	res, err := db.DB.Exec(ctx, query, args...)
+	res, err := db.DB.Exec(query, args...)
 	db.finished(query, args, org)
 	return res, err
 }
 
-func (db *profilerDB) Query(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+func (db *profilerDB) Query(query string, args ...interface{}) (Rows, error) {
 	org := time.Now()
-	res, err := db.DB.Query(ctx, query, args...)
+	res, err := db.DB.Query(query, args...)
 	db.finished(query, args, org)
 	return res, err
 }
 
-func (db *profilerDB) QueryRow(ctx context.Context, query string, args ...interface{}) Row {
+func (db *profilerDB) QueryRow(query string, args ...interface{}) Row {
 	org := time.Now()
-	res := db.DB.QueryRow(ctx, query, args...)
+	res := db.DB.QueryRow(query, args...)
 	db.finished(query, args, org)
 	return res
 }
@@ -185,44 +195,44 @@ type profilerTx struct {
 	profiler
 }
 
-func (t *profilerTx) Begin(ctx context.Context, opts *TxOptions) (Tx, error) {
+func (t *profilerTx) Begin(opts *TxOptions) (Tx, error) {
 	org := time.Now()
-	res, err := t.Tx.Begin(ctx, opts)
+	res, err := t.Tx.Begin(opts)
 	t.finished(fmt.Sprintf("SAVEPOINT %d", res.Level()), nil, org)
 	return &profilerTx{Tx: res, profiler: t.profiler}, err
 }
 
-func (t *profilerTx) Commit(ctx context.Context) error {
+func (t *profilerTx) Commit() error {
 	org := time.Now()
-	err := t.Tx.Commit(ctx)
+	err := t.Tx.Commit()
 	t.finished(fmt.Sprintf("COMMIT %d", t.Level()), nil, org)
 	return err
 }
 
-func (t *profilerTx) Rollback(ctx context.Context) error {
+func (t *profilerTx) Rollback() error {
 	org := time.Now()
-	err := t.Tx.Rollback(ctx)
+	err := t.Tx.Rollback()
 	t.finished(fmt.Sprintf("ROLLBACK %d", t.Level()), nil, org)
 	return err
 }
 
-func (t *profilerTx) Exec(ctx context.Context, query string, args ...interface{}) (Result, error) {
+func (t *profilerTx) Exec(query string, args ...interface{}) (Result, error) {
 	org := time.Now()
-	res, err := t.Tx.Exec(ctx, query, args...)
+	res, err := t.Tx.Exec(query, args...)
 	t.finished(query, args, org)
 	return res, err
 }
 
-func (t *profilerTx) Query(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+func (t *profilerTx) Query(query string, args ...interface{}) (Rows, error) {
 	org := time.Now()
-	res, err := t.Tx.Query(ctx, query, args...)
+	res, err := t.Tx.Query(query, args...)
 	t.finished(query, args, org)
 	return res, err
 }
 
-func (t *profilerTx) QueryRow(ctx context.Context, query string, args ...interface{}) Row {
+func (t *profilerTx) QueryRow(query string, args ...interface{}) Row {
 	org := time.Now()
-	res := t.Tx.QueryRow(ctx, query, args...)
+	res := t.Tx.QueryRow(query, args...)
 	t.finished(query, args, org)
 	return res
 }
@@ -233,68 +243,67 @@ type profilerStmt struct {
 	query string
 }
 
-func (stmt *profilerStmt) Exec(ctx context.Context, args ...interface{}) (Result, error) {
+func (stmt *profilerStmt) Exec(args ...interface{}) (Result, error) {
 	org := time.Now()
-	res, err := stmt.Stmt.Exec(ctx, args...)
+	res, err := stmt.Stmt.Exec(args...)
 	stmt.finished("EXECUTE STATEMENT\n"+stmt.query, args, org)
 	return res, err
 }
 
-func (stmt *profilerStmt) Query(ctx context.Context, args ...interface{}) (Rows, error) {
+func (stmt *profilerStmt) Query(args ...interface{}) (Rows, error) {
 	org := time.Now()
-	res, err := stmt.Stmt.Query(ctx, args...)
+	res, err := stmt.Stmt.Query(args...)
 	stmt.finished("QUERY STATEMENT\n"+stmt.query, args, org)
 	return res, err
 }
 
-func (stmt *profilerStmt) QueryRow(ctx context.Context, args ...interface{}) Row {
+func (stmt *profilerStmt) QueryRow(args ...interface{}) Row {
 	org := time.Now()
-	res := stmt.Stmt.QueryRow(ctx, args...)
+	res := stmt.Stmt.QueryRow(args...)
 	stmt.finished("QUERY STATEMENT\n"+stmt.query, args, org)
 	return res
 }
 
 // Open database with profiler
 func OpenWithProfiler(
-	informer Informer,
+	tracer Tracer,
 	indent string,
 	activator Activator,
 ) Activator {
-	return func(ctx context.Context, dsc DSC) (DB, error) {
-		db, err := Open(ctx, dsc, activator)
+	return func(dsc DSC) (DB, error) {
+		db, err := Open(dsc, activator)
 		if err != nil {
 			return nil, err
 		}
 
-		return WithProfiler(db, informer, indent), nil
+		return WithProfiler(db, tracer, indent), nil
 	}
 }
 
 // Wrap database profiler
 func WithProfiler(
 	db DB,
-	informer Informer,
+	tracer Tracer,
 	indent string,
 ) DB {
 	return &profilerDB{
 		DB:       db,
-		profiler: &profilerMngr{informer: informer, indent: indent},
+		profiler: &profilerMngr{Tracer: tracer, indent: indent},
 	}
 }
 
 // Open complex database with decorators
 // Example:
-//   db, err := sql.OpenEx(dsc, reports, autostart, OpenWithHeartbeat(10*time.Second, nil))
+//   db, err := sql.OpenEx(dsc, OpenWithHeartbeat(10*time.Second, nil))
 func Open(
-	ctx context.Context,
 	dsc DSC,
 	activator Activator,
 ) (db DB, err error) {
 	if activator == nil {
-		return open(ctx, dsc, dsc.Type)
+		return open(dsc, dsc.Type)
 	}
 
-	db, err = activator(ctx, dsc)
+	db, err = activator(dsc)
 	if err != nil {
 		return nil, err
 	}
@@ -302,13 +311,67 @@ func Open(
 	return db, nil
 }
 
-func CloseOnError(ctx context.Context, db DB, err error) {
+// Open concurrently opens each underlying physical db.
+// dataSourceNames must be a semi-comma separated list of DSNs with the first
+// one being used as the master and the rest as slaves.
+func open(
+	dsc DSC,
+	reactorType ReactorType,
+) (DB, error) {
+	if reactorType == 0 {
+		reactorType = PrimaryReactor
+	}
+
+	if len(dsc.DSN) == 1 {
+		db, adapter, err := dsc.DSN[0].openSQL(dsc.Driver)
+		if err != nil {
+			return nil, err
+		}
+		return &database1{
+			db:          db,
+			dsc:         dsc,
+			adapter:     adapter,
+			reactorType: reactorType,
+			composer:    composer{stop: make(chan struct{})},
+			Metrics:     new(Metrics),
+		}, nil
+	}
+
+	adapter, err := adapters.find(dsc.Driver)
 	if err != nil {
-		db.Close(ctx)
+		return nil, err
+	}
+
+	db := &database2{
+		pdbs:        make([]*sql.DB, len(dsc.DSN)),
+		dsc:         dsc,
+		reactorType: reactorType,
+		adapter:     adapter,
+		composer:    composer{stop: make(chan struct{})},
+		Metrics:     new(Metrics),
+	}
+
+	err = scatter(
+		len(db.pdbs),
+		func(i int) (err error) {
+			db.pdbs[i], _, err = dsc.DSN[0].openSQL(dsc.Driver)
+			return err
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
+}
+
+func CloseOnError(db DB, err error) {
+	if err != nil {
+		_ = db.Close()
 	} else {
 		e := recover()
 		if e != nil {
-			db.Close(ctx)
+			_ = db.Close()
 			panic(e)
 		}
 	}
