@@ -15,13 +15,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package echo
+package data
 
 import (
+	"context"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+// Pair enumerator
+type PairEnumerator interface {
+	Enumerate(ctx context.Context, action PairEnumeratorFunc) error
+}
+
+type PairEnumeratorFunc func(key, value string) error
 
 // Abstract dataset
 // Worked with literal representation keys and values.
@@ -36,7 +44,7 @@ type DataSets map[uint16]DataSet // DataSet by language
 
 // DataSet provider
 type DataSetProvider interface {
-	DataSet(ctx Context) (DataSet, error)
+	DataSet(ctx context.Context) (DataSet, error)
 }
 
 // Simple pair of key and value
@@ -71,7 +79,7 @@ func (ds *dataSet) Has(key string) bool {
 }
 
 func (ds *dataSet) Enumerate(
-	ctx Context,
+	ctx context.Context,
 	action PairEnumeratorFunc,
 ) error {
 	for _, pair := range ds.index {

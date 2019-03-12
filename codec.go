@@ -19,6 +19,7 @@ package echo
 
 import (
 	"fmt"
+	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"strconv"
 )
@@ -43,14 +44,12 @@ type Codec interface {
 type PairCodec interface {
 	Codec
 	PairEnumerator
-	DataSetProvider
+	data.DataSetProvider
 }
-
-type PairEnumeratorFunc func(key, value string) error
 
 // Pair enumerator
 type PairEnumerator interface {
-	Enumerate(ctx Context, action PairEnumeratorFunc) error
+	Enumerate(ctx Context, action data.PairEnumeratorFunc) error
 }
 
 type ValidatorText interface {

@@ -20,6 +20,7 @@ package echo
 import (
 	stdContext "context"
 	"fmt"
+	"github.com/adverax/echo/data"
 	"net/url"
 	"time"
 )
@@ -70,7 +71,7 @@ type Locale interface {
 	// Get resource translation into the current language
 	Resource(ctx stdContext.Context, id uint32) (string, error)
 	// Get dataset translation into the current language
-	DataSet(ctx stdContext.Context, id uint32) (DataSet, error)
+	DataSet(ctx stdContext.Context, id uint32) (data.DataSet, error)
 }
 
 // MessageFamily for selected language
@@ -85,7 +86,7 @@ type ResourceFamily interface {
 
 // DataSetFamily for selected language
 type DataSetFamily interface {
-	Fetch(ctx stdContext.Context, id uint32) (DataSet, error)
+	Fetch(ctx stdContext.Context, id uint32) (data.DataSet, error)
 }
 
 // BaseLocale is a simple Locale structure.
@@ -147,7 +148,7 @@ func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, erro
 	return loc.Resources.Fetch(ctx, id)
 }
 
-func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (DataSet, error) {
+func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (data.DataSet, error) {
 	return loc.DataSets.Fetch(ctx, id)
 }
 
@@ -258,23 +259,6 @@ type UrlLinker interface {
 	Expand(ctx Context, url string) string
 	// Collapse url by removing current shard
 	Collapse(ctx Context, url string) string
-}
-
-type Pagination struct {
-	Offset int64 `json:"offset"`
-	Limit  int64 `json:"limit"`
-}
-
-// Data provider for receive external data
-type DataProvider interface {
-	// Get displayed records count
-	Count(ctx Context) (int, error)
-	// Get total records count
-	Total(ctx Context) (int, error)
-	// Import records
-	Import(ctx Context, pagination Pagination) error
-	// Go to next row
-	Next(ctx Context) error
 }
 
 var (

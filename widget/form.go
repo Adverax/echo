@@ -19,6 +19,7 @@ package widget
 
 import (
 	"github.com/adverax/echo"
+	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"io"
 	"os"
@@ -567,7 +568,7 @@ func (w *FormFileInput) Upload(
 type FormSelector struct {
 	FormField
 	Required bool         // Value is required
-	Items    echo.DataSet // Field items
+	Items    data.DataSet // Field items
 }
 
 func (w *FormSelector) Render(
@@ -721,7 +722,7 @@ func (w *FormCheckBox) SetValue(
 type FormSubmit struct {
 	FormField
 	Required bool         // Value is required
-	Items    echo.DataSet // Optional set of values
+	Items    data.DataSet // Optional set of values
 }
 
 func (w *FormSubmit) Render(

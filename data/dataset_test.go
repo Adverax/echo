@@ -15,12 +15,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package echo
+package data
 
 import (
+	"context"
 	"github.com/stretchr/testify/assert"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
@@ -34,18 +33,17 @@ func TestNewDataSet(t *testing.T) {
 		true,
 	)
 
-	e := New()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
 	// Check enumeration
 	var keys, values string
-	ds.Enumerate(c, func(key, value string) error {
-		keys += key
-		values += value
-		return nil
-	})
+	err := ds.Enumerate(
+		context.Background(),
+		func(key, value string) error {
+			keys += key
+			values += value
+			return nil
+		},
+	)
+	assert.NoError(t, err)
 
 	assert.Equal(t, "abc", keys)
 	assert.Equal(t, "123", values)

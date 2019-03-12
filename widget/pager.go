@@ -18,9 +18,11 @@
 package widget
 
 import (
-	"github.com/adverax/echo"
 	"net/url"
 	"strconv"
+
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/data"
 )
 
 type PagerInfo struct {
@@ -58,17 +60,17 @@ func (w *PagerReport) render(
 }
 
 type Pager struct {
-	Id       string            // Pager identifier (optional)
-	MsgEmpty Widget            // Message for empty record set (optional)
-	MsgStats Widget            // Message for statistics )optional)
-	Label    Widget            // Pager label (optional)
-	Prev     Widget            // Previous page label (optional)
-	Next     Widget            // Next page label (optional)
-	Param    string            // Hot parameter (default "pg")
-	Capacity int               // Items count per page (default 10). Without data provider it is row count
-	BtnCount int               // Links count in pager (default 10)
-	Url      *url.URL          // Base url (default used current request url)
-	Provider echo.DataProvider // Data provider
+	Id       string        // Pager identifier (optional)
+	MsgEmpty Widget        // Message for empty record set (optional)
+	MsgStats Widget        // Message for statistics )optional)
+	Label    Widget        // Pager label (optional)
+	Prev     Widget        // Previous page label (optional)
+	Next     Widget        // Next page label (optional)
+	Param    string        // Hot parameter (default "pg")
+	Capacity int           // Items count per page (default 10). Without data provider it is row count
+	BtnCount int           // Links count in pager (default 10)
+	Url      *url.URL      // Base url (default used current request url)
+	Provider data.Provider // Data provider
 }
 
 func (w *Pager) execute(
@@ -182,7 +184,7 @@ func (w *Pager) execute(
 
 		err = w.Provider.Import(
 			ctx,
-			echo.Pagination{
+			data.Pagination{
 				Offset: int64(capacity) * int64(info.CurPage-1),
 				Limit:  int64(capacity),
 			},

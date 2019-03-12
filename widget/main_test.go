@@ -18,14 +18,18 @@
 package widget
 
 import (
+	stdContext "context"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/adverax/echo"
-	"github.com/adverax/echo/generic"
-	"github.com/stretchr/testify/require"
 	"net/url"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/data"
+	"github.com/adverax/echo/generic"
 )
 
 type dataMock struct {
@@ -40,15 +44,15 @@ type dataProviderMock struct {
 	index int
 }
 
-func (provider *dataProviderMock) Count(ctx echo.Context) (int, error) {
+func (provider *dataProviderMock) Count(ctx stdContext.Context) (int, error) {
 	return len(provider.rows), nil
 }
 
-func (provider *dataProviderMock) Total(ctx echo.Context) (int, error) {
+func (provider *dataProviderMock) Total(ctx stdContext.Context) (int, error) {
 	return len(provider.all), nil
 }
 
-func (provider *dataProviderMock) Import(ctx echo.Context, pagination echo.Pagination) error {
+func (provider *dataProviderMock) Import(ctx stdContext.Context, pagination data.Pagination) error {
 	provider.index = 0
 	last := pagination.Offset + pagination.Limit
 	if last < int64(len(provider.all)) {
@@ -59,7 +63,7 @@ func (provider *dataProviderMock) Import(ctx echo.Context, pagination echo.Pagin
 	return nil
 }
 
-func (provider *dataProviderMock) Next(ctx echo.Context) error {
+func (provider *dataProviderMock) Next(ctx stdContext.Context) error {
 	index := provider.index + 1
 	if index > len(provider.rows) {
 		return errors.New("range check error")
