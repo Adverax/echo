@@ -20,9 +20,10 @@ package echo
 import (
 	stdContext "context"
 	"fmt"
-	"github.com/adverax/echo/data"
 	"net/url"
 	"time"
+
+	"github.com/adverax/echo/data"
 )
 
 const (
@@ -70,8 +71,8 @@ type Locale interface {
 	Message(ctx stdContext.Context, id uint32) (string, error)
 	// Get resource translation into the current language
 	Resource(ctx stdContext.Context, id uint32) (string, error)
-	// Get dataset translation into the current language
-	DataSet(ctx stdContext.Context, id uint32) (data.DataSet, error)
+	// Get data source translation into the current language
+	DataSource(ctx stdContext.Context, id uint32) (data.Source, error)
 }
 
 // MessageFamily for selected language
@@ -84,9 +85,9 @@ type ResourceFamily interface {
 	Fetch(ctx stdContext.Context, id uint32) (string, error)
 }
 
-// DataSetFamily for selected language
-type DataSetFamily interface {
-	Fetch(ctx stdContext.Context, id uint32) (data.DataSet, error)
+// DataSourceFamily for selected language
+type DataSourceFamily interface {
+	Fetch(ctx stdContext.Context, id uint32) (data.Source, error)
 }
 
 // BaseLocale is a simple Locale structure.
@@ -99,9 +100,9 @@ type BaseLocale struct {
 	TZone uint16 // Timezone identifier
 	Loc   *time.Location
 
-	Messages  MessageFamily
-	Resources ResourceFamily
-	DataSets  DataSetFamily
+	Messages    MessageFamily
+	Resources   ResourceFamily
+	DataSources DataSourceFamily
 }
 
 func (loc *BaseLocale) Language() uint16 {
@@ -148,8 +149,8 @@ func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, erro
 	return loc.Resources.Fetch(ctx, id)
 }
 
-func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (data.DataSet, error) {
-	return loc.DataSets.Fetch(ctx, id)
+func (loc *BaseLocale) DataSource(ctx stdContext.Context, id uint32) (data.Source, error) {
+	return loc.DataSources.Fetch(ctx, id)
 }
 
 // Validation error can be translated into target language.

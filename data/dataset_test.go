@@ -24,7 +24,7 @@ import (
 )
 
 func TestNewDataSet(t *testing.T) {
-	ds := NewDataSet(
+	ds := NewSource(
 		map[string]string{
 			"a": "1",
 			"b": "2",

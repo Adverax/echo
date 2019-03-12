@@ -31,20 +31,20 @@ type PairEnumerator interface {
 
 type PairEnumeratorFunc func(key, value string) error
 
-// Abstract dataset
+// Abstract data source
 // Worked with literal representation keys and values.
-type DataSet interface {
+type Source interface {
 	PairEnumerator
 	Has(key string) bool
 	Length() int
 }
 
-// Map of DataSet by language code.
-type DataSets map[uint16]DataSet // DataSet by language
+// Map of DataSource by language code.
+type Sources map[uint16]Source // DataSource by language
 
-// DataSet provider
-type DataSetProvider interface {
-	DataSet(ctx context.Context) (DataSet, error)
+// DataSource provider
+type SourceProvider interface {
+	DataSet(ctx context.Context) (Source, error)
 }
 
 // Simple pair of key and value
@@ -67,7 +67,7 @@ func (index index) Swap(i, j int) {
 	index[i], index[j] = index[j], index[i]
 }
 
-// DataSet implementation/
+// DataSource implementation/
 type dataSet struct {
 	items map[string]string
 	index index
@@ -98,11 +98,11 @@ func (ds *dataSet) Length() int {
 	return len(ds.index)
 }
 
-// Create new DataSet from map
-func NewDataSet(
+// Create new DataSource from map
+func NewSource(
 	items map[string]string, // Map of items
 	sorted bool, // If you want sort items by alphabetically.
-) DataSet {
+) Source {
 	index := make(index, 0, len(items))
 
 	for key, val := range items {
@@ -119,23 +119,23 @@ func NewDataSet(
 	}
 }
 
-// Create new DataSet from list.
-func NewDataSetFromList(
+// Create new DataSource from list.
+func NewSourceFromList(
 	items []string, // Slice of items
 	sorted bool, // If you want sort items by alphabetically.
-) DataSet {
+) Source {
 	m := make(map[string]string, len(items))
 	for index, val := range items {
 		key := strconv.FormatInt(int64(index)+1, 10)
 		m[key] = val
 	}
 
-	return NewDataSet(m, sorted)
+	return NewSource(m, sorted)
 }
 
-var EmptyDataSet = NewDataSet(make(map[string]string), false)
+var EmptyDataSet = NewSource(make(map[string]string), false)
 
-// Create DataSet from literal representation
+// Create DataSource from literal representation
 // DATA SOURCE FORMAT:
 // The source may have a headline or not. In the absence of a headline, a list is implied.
 // Each element is located on a separate line.
@@ -160,7 +160,7 @@ var EmptyDataSet = NewDataSet(make(map[string]string), false)
 // The numbering of elements starts from one (used only if the key is omitted). The next item is max + 1.
 // Blank lines (or "_" lines) have code, but are not displayed.
 // Empty characters at the beginning and end of the line are ignored.
-func ParseDataSet(source string) DataSet {
+func ParseDataSet(source string) Source {
 	source = strings.TrimSpace(source)
 	if source == "" {
 		return EmptyDataSet
@@ -226,18 +226,18 @@ func parseDataSetHeader(
 func parseDataSetList(
 	lines []string,
 	sorted bool,
-) DataSet {
+) Source {
 	if len(lines) == 0 {
 		return EmptyDataSet
 	}
-	return NewDataSetFromList(lines, sorted)
+	return NewSourceFromList(lines, sorted)
 }
 
 func parseDataSetMap(
 	lines []string,
 	sorted bool,
 	delimiter string,
-) DataSet {
+) Source {
 	if len(lines) == 0 {
 		return EmptyDataSet
 	}
@@ -267,5 +267,5 @@ func parseDataSetMap(
 		key++
 	}
 
-	return NewDataSet(enum, sorted)
+	return NewSource(enum, sorted)
 }

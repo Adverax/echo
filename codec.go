@@ -44,7 +44,7 @@ type Codec interface {
 type PairCodec interface {
 	Codec
 	PairEnumerator
-	data.DataSetProvider
+	data.SourceProvider
 }
 
 // Pair enumerator
