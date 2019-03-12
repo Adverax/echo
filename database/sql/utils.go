@@ -22,9 +22,9 @@ import (
 	"time"
 )
 
-type ReactorType int
+type DbId int
 
-const PrimaryReactor ReactorType = 1
+const PrimaryDatabase DbId = 1
 
 func scatter(n int, fn func(i int) error) error {
 	errors := make(chan error, n)
@@ -45,7 +45,7 @@ func scatter(n int, fn func(i int) error) error {
 }
 
 // Extract database context from context
-func FromContext(ctx context.Context, key ReactorType) Scope {
+func FromContext(ctx context.Context, key DbId) Scope {
 	val := ctx.Value(key)
 	if c, valid := val.(Scope); valid {
 		return c
@@ -58,7 +58,7 @@ func ToContext(
 	ctx context.Context,
 	scope Scope,
 ) context.Context {
-	return context.WithValue(ctx, scope.Type(), scope)
+	return context.WithValue(ctx, scope.DbId(), scope)
 }
 
 func Heartbeart(

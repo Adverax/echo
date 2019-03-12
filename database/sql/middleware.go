@@ -316,10 +316,10 @@ func Open(
 // one being used as the master and the rest as slaves.
 func open(
 	dsc DSC,
-	reactorType ReactorType,
+	reactorType DbId,
 ) (DB, error) {
 	if reactorType == 0 {
-		reactorType = PrimaryReactor
+		reactorType = PrimaryDatabase
 	}
 
 	if len(dsc.DSN) == 1 {

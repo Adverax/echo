@@ -80,9 +80,9 @@ func (dsn *DSN) openSQL(driver string) (*sql.DB, Adapter, error) {
 
 // DataSource nodes cluster (first node is master)
 type DSC struct {
-	Driver string      `json:"Driver"`
-	Type   ReactorType `json:"-"`
-	DSN    []*DSN      `json:"dsn"`
+	Driver string `json:"Driver"`
+	Type   DbId   `json:"-"`
+	DSN    []*DSN `json:"dsn"`
 }
 
 func (dsc *DSC) Primary() DSN {
@@ -244,7 +244,7 @@ type Scope interface {
 	Exec(query string, args ...interface{}) (Result, error)
 	Query(query string, args ...interface{}) (Rows, error)
 	QueryRow(query string, args ...interface{}) Row
-	Type() ReactorType
+	DbId() DbId
 	Adapter() Adapter
 }
 
@@ -287,7 +287,7 @@ type DB interface {
 	SetMaxOpenConns(n int)
 	SetConnMaxLifetime(d time.Duration)
 	IsCluster() bool
-	ReactorType() ReactorType
+	ReactorType() DbId
 	GetMetrics() Metrics
 	Audit(auditor interface{}) error
 	Interface(detective func(interface{}) interface{}) (interface{}, bool)
@@ -447,7 +447,7 @@ func (res *result) RowsAffected() (int64, error) {
 type database1 struct {
 	db          *sql.DB
 	dsc         DSC
-	reactorType ReactorType
+	reactorType DbId
 	adapter     Adapter
 	*Metrics
 	composer
@@ -457,7 +457,7 @@ func (db *database1) DSC() DSC {
 	return db.dsc
 }
 
-func (db *database1) Type() ReactorType {
+func (db *database1) DbId() DbId {
 	return db.reactorType
 }
 
@@ -581,7 +581,7 @@ func (db *database1) IsCluster() bool {
 	return false
 }
 
-func (db *database1) ReactorType() ReactorType {
+func (db *database1) ReactorType() DbId {
 	return db.reactorType
 }
 
@@ -600,7 +600,7 @@ type database2 struct {
 	pdbs        []*sql.DB // Physical databases
 	dsc         DSC
 	count       uint64 // Monotonically incrementing counter on each query
-	reactorType ReactorType
+	reactorType DbId
 	adapter     Adapter
 	*Metrics
 	composer
@@ -610,7 +610,7 @@ func (db *database2) DSC() DSC {
 	return db.dsc
 }
 
-func (db *database2) Type() ReactorType {
+func (db *database2) DbId() DbId {
 	return db.reactorType
 }
 
@@ -771,7 +771,7 @@ func (db *database2) IsCluster() bool {
 	return true
 }
 
-func (db *database2) ReactorType() ReactorType {
+func (db *database2) ReactorType() DbId {
 	return db.reactorType
 }
 
@@ -792,8 +792,8 @@ type tx struct {
 	started int64
 }
 
-func (t *tx) Type() ReactorType {
-	return t.db.Type()
+func (t *tx) DbId() DbId {
+	return t.db.DbId()
 }
 
 func (t *tx) Adapter() Adapter {
@@ -866,8 +866,8 @@ type txx struct {
 	active bool
 }
 
-func (t *txx) Type() ReactorType {
-	return t.db.Type()
+func (t *txx) DbId() DbId {
+	return t.db.DbId()
 }
 
 func (t *txx) Adapter() Adapter {
@@ -919,7 +919,7 @@ type Repository interface {
 }
 
 type repository struct {
-	reactorKey ReactorType
+	reactorKey DbId
 	db         DB
 }
 
