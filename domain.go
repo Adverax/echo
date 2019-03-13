@@ -26,12 +26,6 @@ import (
 	"github.com/adverax/echo/data"
 )
 
-const (
-	DateFormat     = "2006-01-02"
-	TimeFormat     = "15:04:05"
-	DateTimeFormat = "2006-01-02 15:04:05"
-)
-
 // Abstract data storage
 type Storage interface {
 	// Get value by key.

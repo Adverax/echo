@@ -246,7 +246,7 @@ func (w RESOURCE) Render(ctx echo.Context) (interface{}, error) {
 type DATETIME string
 
 func (w DATETIME) Render(ctx echo.Context) (interface{}, error) {
-	tm, err := time.ParseInLocation(echo.DateTimeFormat, string(w), time.UTC)
+	tm, err := time.ParseInLocation(generic.DateTimeFormat, string(w), time.UTC)
 	if err != nil {
 		return nil, err
 	}

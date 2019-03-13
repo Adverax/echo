@@ -20,6 +20,7 @@ package echo
 import (
 	stdContext "context"
 	"github.com/adverax/echo/data"
+	"github.com/adverax/echo/generic"
 	"net/url"
 	"time"
 
@@ -86,9 +87,9 @@ var (
 	DefaultLinker    = &DefaultUrlLinker{}
 	DefaultCache     = memory.New(memory.Options{})
 	DefaultLocale    = &BaseLocale{
-		DateFormat:     DateFormat,
-		TimeFormat:     TimeFormat,
-		DateTimeFormat: DateTimeFormat,
+		DateFormat:     generic.DateFormat,
+		TimeFormat:     generic.TimeFormat,
+		DateTimeFormat: generic.DateTimeFormat,
 		Lang:           1,
 		TZone:          1,
 		Loc:            time.UTC,
