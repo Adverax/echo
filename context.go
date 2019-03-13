@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/adverax/echo/log"
+	"html/template"
 	"io"
 	"mime/multipart"
 	"net"
@@ -156,6 +157,9 @@ type Context interface {
 
 	// Stream sends a streaming response with status code and content type.
 	Stream(code int, contentType string, r io.Reader) error
+
+	// Template sends a HTML response with status code,
+	Template(code int, t *template.Template, data interface{}) (err error)
 
 	// File sends a response with the content of the file.
 	File(file string) error
@@ -561,6 +565,12 @@ func (c *context) Stream(code int, contentType string, r io.Reader) (err error) 
 	c.response.WriteHeader(code)
 	_, err = io.Copy(c.response, r)
 	return
+}
+
+func (c *context) Template(code int, t *template.Template, data interface{}) (err error) {
+	c.writeContentType(MIMETextHTMLCharsetUTF8)
+	c.response.WriteHeader(code)
+	return t.Execute(c.response.Writer, data)
 }
 
 func (c *context) File(file string) (err error) {
