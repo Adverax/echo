@@ -84,6 +84,8 @@ type ModelField interface {
 	Reset(ctx Context) error
 }
 
+type ValidatorFunc func() error
+
 type ModelValidator func(me *Model) error
 
 type Model map[string]interface{}
@@ -99,6 +101,7 @@ func (model Model) Clone() Model {
 func (model Model) Bind(
 	ctx Context,
 	rec interface{},
+	validators ...ValidatorFunc,
 ) error {
 	req := ctx.Request()
 
@@ -138,7 +141,7 @@ func (model Model) Bind(
 		if err != nil {
 			return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
-		if err = model.BindFrom(ctx, params, rec); err != nil {
+		if err = model.BindFrom(ctx, params, rec, validators...); err != nil {
 			return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
 	default:
@@ -152,6 +155,7 @@ func (model Model) BindFrom(
 	ctx Context,
 	data map[string][]string,
 	rec interface{},
+	validators ...ValidatorFunc,
 ) error {
 	if rec == nil {
 		// Skip record assignment
@@ -168,6 +172,12 @@ func (model Model) BindFrom(
 						return err
 					}
 				}
+			}
+		}
+		for _, validator := range validators {
+			err := validator()
+			if err != nil {
+				return err
 			}
 		}
 		return nil
@@ -199,9 +209,16 @@ func (model Model) BindFrom(
 					}
 
 					dst := f.Addr().Interface()
-					generic.ConvertAssign(dst, field.GetVal())
+					_ = generic.ConvertAssign(dst, field.GetVal())
 				}
 			}
+		}
+	}
+
+	for _, validator := range validators {
+		err := validator()
+		if err != nil {
+			return err
 		}
 	}
 
