@@ -23,12 +23,22 @@ import (
 	"io/ioutil"
 	syslog "log"
 	"os"
+	"strings"
 	"sync/atomic"
+)
+
+const (
+	ClassTrace Class = iota + 1
+	ClassInfo
+	ClassWarning
+	ClassError
 )
 
 const (
 	delimiter = "\n"
 )
+
+type Class uint8
 
 // Statistics for logger
 type Metrics struct {
@@ -59,28 +69,28 @@ type logger struct {
 func (log *logger) Trace(v interface{}) {
 	if s, ok := valueToString(v); ok {
 		atomic.AddInt32(&log.metrics.Traces, 1)
-		log.trace.Output(2, delimiter+s)
+		_ = log.trace.Output(2, delimiter+s)
 	}
 }
 
 func (log *logger) Info(v interface{}) {
 	if s, ok := valueToString(v); ok {
 		atomic.AddInt32(&log.metrics.Infos, 1)
-		log.info.Output(2, delimiter+s)
+		_ = log.info.Output(2, delimiter+s)
 	}
 }
 
 func (log *logger) Warning(v interface{}) {
 	if s, ok := valueToString(v); ok {
 		atomic.AddInt32(&log.metrics.Warnings, 1)
-		log.warning.Output(2, delimiter+s)
+		_ = log.warning.Output(2, delimiter+s)
 	}
 }
 
 func (log *logger) Error(v interface{}) {
 	if s, ok := valueToString(v); ok {
 		atomic.AddInt32(&log.metrics.Errors, 1)
-		log.error.Output(2, delimiter+s)
+		_ = log.error.Output(2, delimiter+s)
 	}
 }
 
@@ -196,4 +206,32 @@ func valueToString(v interface{}) (string, bool) {
 	default:
 		return "", false
 	}
+}
+
+var decoders = map[Class]string{
+	ClassTrace:   "trace",
+	ClassInfo:    "info",
+	ClassWarning: "warning",
+	ClassError:   "error",
+}
+
+var encoders = map[string]Class{
+	"trace":   ClassTrace,
+	"info":    ClassInfo,
+	"warning": ClassWarning,
+	"error":   ClassError,
+}
+
+func DecodeClassName(class Class) string {
+	if res, found := decoders[class]; found {
+		return res
+	}
+	return "error"
+}
+
+func EncodeClassName(class string) Class {
+	if res, found := encoders[strings.ToLower(class)]; found {
+		return res
+	}
+	return ClassError
 }
