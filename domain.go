@@ -19,12 +19,34 @@ package echo
 
 import (
 	stdContext "context"
+	"encoding/gob"
 	"fmt"
+	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/adverax/echo/data"
 )
+
+const (
+	FlashError   FlashClass = "danger"
+	FlashWarning FlashClass = "warning"
+	FlashSuccess FlashClass = "success"
+	FlashInfo    FlashClass = "info"
+)
+
+// Flash notification
+type FlashClass string
+
+type Flash struct {
+	Class   FlashClass
+	Message interface{}
+}
+
+func init() {
+	gob.Register(Flash{})
+	gob.Register(FlashClass(0))
+}
 
 // Abstract data storage
 type Storage interface {
@@ -36,6 +58,24 @@ type Storage interface {
 	IsExist(key string) (bool, error)
 	// Delete cached value by key.
 	Delete(key string) error
+}
+
+// Abstract interface for session
+type Session interface {
+	Storage
+	// Clear deletes all values in the session.
+	Clear()
+	// AddFlash adds a flash message to the session.
+	AddFlash(flash Flash)
+	// Flashes returns a slice of flash messages from the session.
+	Flashes() []interface{}
+	// Save saves all sessions used during the current request.
+	Save() error
+}
+
+// Session manager
+type SessionManager interface {
+	Load(ctx stdContext.Context, request *http.Request) (Session, error)
 }
 
 // Locale represents localization strategy.

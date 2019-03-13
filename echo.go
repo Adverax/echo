@@ -81,6 +81,7 @@ type (
 		Locale           Locale // Prototype
 		UrlLinker        UrlLinker
 		Cache            cache.Cache
+		Sessions         SessionManager
 		Context          stdContext.Context
 	}
 
@@ -281,6 +282,7 @@ func New() (e *Echo) {
 		Locale:    DefaultLocale,
 		UrlLinker: DefaultLinker,
 		Cache:     DefaultCache,
+		Sessions:  DefaultSessions,
 		Context:   stdContext.Background(),
 		Logger:    log.NewDebug("\n"),
 		AutoTLSManager: autocert.Manager{

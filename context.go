@@ -189,6 +189,9 @@ type Context interface {
 	// Logger returns the `Logger` instance.
 	Logger() log.Logger
 
+	// Session returns the `Session` instance.
+	Session() (Session, error)
+
 	// Echo returns the `Echo` instance.
 	Echo() *Echo
 
@@ -214,6 +217,7 @@ type context struct {
 	echo     *Echo
 	lock     sync.RWMutex
 	locale   Locale
+	session  Session
 }
 
 func (c *context) writeContentType(value string) {
@@ -643,6 +647,18 @@ func (c *context) Logger() log.Logger {
 	return c.echo.Logger
 }
 
+func (c *context) Session() (Session, error) {
+	if c.session == nil {
+		session, err := c.echo.Sessions.Load(c, c.request)
+		if err != nil {
+			return nil, err
+		}
+		c.session = session
+	}
+
+	return c.session, nil
+}
+
 func (c *context) Reset(r *http.Request, w http.ResponseWriter) {
 	c.request = r
 	c.response.reset(w)
@@ -651,6 +667,7 @@ func (c *context) Reset(r *http.Request, w http.ResponseWriter) {
 	c.store = nil
 	c.path = ""
 	c.pnames = nil
+	c.session = nil
 	// NOTE: Don't reset because it has to have length c.echo.maxParam at all times
 	// c.pvalues = nil
 }

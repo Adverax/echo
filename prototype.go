@@ -19,8 +19,10 @@ package echo
 
 import (
 	stdContext "context"
+	"fmt"
 	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
+	"net/http"
 	"net/url"
 	"time"
 
@@ -80,12 +82,22 @@ func (linker *DefaultUrlLinker) Collapse(ctx Context, url string) string {
 	return url
 }
 
+type DefaultSessionManager struct{}
+
+func (manager *DefaultSessionManager) Load(
+	ctc stdContext.Context,
+	request *http.Request,
+) (Session, error) {
+	return nil, fmt.Errorf("abstact method for session, loading")
+}
+
 var (
 	DefaultMessages  = &DefaultMessageManager{}
 	DefaultResources = &DefaultResourceManager{}
 	DefaultDataSets  = &DefaultDataSetManager{}
 	DefaultLinker    = &DefaultUrlLinker{}
 	DefaultCache     = memory.New(memory.Options{})
+	DefaultSessions  = &DefaultSessionManager{}
 	DefaultLocale    = &BaseLocale{
 		DateFormat:     generic.DateFormat,
 		TimeFormat:     generic.TimeFormat,
