@@ -20,6 +20,7 @@
 package sql
 
 import (
+	"context"
 	"fmt"
 	_ "github.com/go-sql-driver/mysql"
 	"io/ioutil"
@@ -54,7 +55,7 @@ func setup() (DB, error) {
 
 	_, err = db.Exec(string(query))
 	if err != nil {
-		_ = db.Close()
+		_ = db.Close(context.Background())
 		return nil, err
 	}
 
@@ -66,7 +67,7 @@ func TestOpen(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer db.Close()
+	defer db.Close(context.Background())
 
 	if err = db.Ping(); err != nil {
 		t.Error(err)
@@ -80,7 +81,7 @@ func TestClose(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err = db.Close(); err != nil {
+	if err = db.Close(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 

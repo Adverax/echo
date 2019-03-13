@@ -86,7 +86,7 @@ func (dsc DSC) OpenForTest(
 	dsn.Database += "_test"
 	db, err := dsn.Open(
 		dsc.Driver,
-		OpenExclusive(0x7ffffff, nil),
+		OpenExclusive(ctx, 0x7ffffff, nil),
 	)
 	if err != nil {
 		panic(err)

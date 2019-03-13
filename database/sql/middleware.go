@@ -18,6 +18,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"strings"
@@ -38,13 +39,13 @@ type exclusiveDatabase struct {
 	dbname string
 }
 
-func (wrapper *exclusiveDatabase) Close() error {
-	err := wrapper.DB.Close()
+func (wrapper *exclusiveDatabase) Close(ctx context.Context) error {
+	err := wrapper.DB.Close(ctx)
 	if err != nil {
 		return err
 	}
 
-	err = wrapper.DB.Adapter().UnlockGlobal(wrapper.tx, wrapper.dbname)
+	err = wrapper.DB.Adapter().UnlockGlobal(ctx, wrapper.tx, wrapper.dbname)
 	if err != nil {
 		return err
 	}
@@ -55,6 +56,7 @@ func (wrapper *exclusiveDatabase) Close() error {
 // Open exclusive access for required database
 // If control is not null, than for latch opens with heartbeard.
 func OpenExclusive(
+	ctx context.Context,
 	timeout int, // seconds
 	activator Activator,
 ) Activator {
@@ -75,15 +77,15 @@ func OpenExclusive(
 		}
 
 		defer func() {
-			CloseOnError(db, err)
+			CloseOnError(ctx, db, err)
 		}()
 
-		tx, err := db.Begin(nil)
+		tx, err := db.Begin()
 		if err != nil {
 			return nil, err
 		}
 
-		err = tx.Adapter().LockGlobal(tx, dbname, timeout)
+		err = tx.Adapter().LockGlobal(ctx, tx, dbname, timeout)
 		if err != nil {
 			return nil, err
 		}
@@ -137,9 +139,19 @@ type profilerDB struct {
 	profiler
 }
 
-func (db *profilerDB) Begin(opts *TxOptions) (Tx, error) {
+func (db *profilerDB) Begin() (Tx, error) {
 	org := time.Now()
-	tx, err := db.DB.Begin(opts)
+	tx, err := db.DB.Begin()
+	db.finished("START TRANSACTION", nil, org)
+	if err != nil {
+		return nil, err
+	}
+	return &profilerTx{Tx: tx, profiler: db}, nil
+}
+
+func (db *profilerDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (Tx, error) {
+	org := time.Now()
+	tx, err := db.DB.BeginTx(ctx, opts)
 	db.finished("START TRANSACTION", nil, org)
 	if err != nil {
 		return nil, err
@@ -155,9 +167,24 @@ func (db *profilerDB) Prepare(query string) (Stmt, error) {
 	return &profilerStmt{Stmt: stmt, profiler: db, query: query}, nil
 }
 
+func (db *profilerDB) PrepareContext(ctx context.Context, query string) (Stmt, error) {
+	stmt, err := db.DB.PrepareContext(ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	return &profilerStmt{Stmt: stmt, profiler: db, query: query}, nil
+}
+
 func (db *profilerDB) Exec(query string, args ...interface{}) (Result, error) {
 	org := time.Now()
 	res, err := db.DB.Exec(query, args...)
+	db.finished(query, args, org)
+	return res, err
+}
+
+func (db *profilerDB) ExecContext(ctx context.Context, query string, args ...interface{}) (Result, error) {
+	org := time.Now()
+	res, err := db.DB.ExecContext(ctx, query, args...)
 	db.finished(query, args, org)
 	return res, err
 }
@@ -169,9 +196,23 @@ func (db *profilerDB) Query(query string, args ...interface{}) (Rows, error) {
 	return res, err
 }
 
+func (db *profilerDB) QueryContext(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+	org := time.Now()
+	res, err := db.DB.QueryContext(ctx, query, args...)
+	db.finished(query, args, org)
+	return res, err
+}
+
 func (db *profilerDB) QueryRow(query string, args ...interface{}) Row {
 	org := time.Now()
 	res := db.DB.QueryRow(query, args...)
+	db.finished(query, args, org)
+	return res
+}
+
+func (db *profilerDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) Row {
+	org := time.Now()
+	res := db.DB.QueryRowContext(ctx, query, args...)
 	db.finished(query, args, org)
 	return res
 }
@@ -195,9 +236,16 @@ type profilerTx struct {
 	profiler
 }
 
-func (t *profilerTx) Begin(opts *TxOptions) (Tx, error) {
+func (t *profilerTx) Begin() (Tx, error) {
 	org := time.Now()
-	res, err := t.Tx.Begin(opts)
+	res, err := t.Tx.Begin()
+	t.finished(fmt.Sprintf("SAVEPOINT %d", res.Level()), nil, org)
+	return &profilerTx{Tx: res, profiler: t.profiler}, err
+}
+
+func (t *profilerTx) BeginTx(ctx context.Context, opts *TxOptions) (Tx, error) {
+	org := time.Now()
+	res, err := t.Tx.BeginTx(ctx, opts)
 	t.finished(fmt.Sprintf("SAVEPOINT %d", res.Level()), nil, org)
 	return &profilerTx{Tx: res, profiler: t.profiler}, err
 }
@@ -223,6 +271,13 @@ func (t *profilerTx) Exec(query string, args ...interface{}) (Result, error) {
 	return res, err
 }
 
+func (t *profilerTx) ExecContext(ctx context.Context, query string, args ...interface{}) (Result, error) {
+	org := time.Now()
+	res, err := t.Tx.ExecContext(ctx, query, args...)
+	t.finished(query, args, org)
+	return res, err
+}
+
 func (t *profilerTx) Query(query string, args ...interface{}) (Rows, error) {
 	org := time.Now()
 	res, err := t.Tx.Query(query, args...)
@@ -230,9 +285,23 @@ func (t *profilerTx) Query(query string, args ...interface{}) (Rows, error) {
 	return res, err
 }
 
+func (t *profilerTx) QueryContext(ctx context.Context, query string, args ...interface{}) (Rows, error) {
+	org := time.Now()
+	res, err := t.Tx.QueryContext(ctx, query, args...)
+	t.finished(query, args, org)
+	return res, err
+}
+
 func (t *profilerTx) QueryRow(query string, args ...interface{}) Row {
 	org := time.Now()
 	res := t.Tx.QueryRow(query, args...)
+	t.finished(query, args, org)
+	return res
+}
+
+func (t *profilerTx) QueryRowContext(ctx context.Context, query string, args ...interface{}) Row {
+	org := time.Now()
+	res := t.Tx.QueryRowContext(ctx, query, args...)
 	t.finished(query, args, org)
 	return res
 }
@@ -250,6 +319,13 @@ func (stmt *profilerStmt) Exec(args ...interface{}) (Result, error) {
 	return res, err
 }
 
+func (stmt *profilerStmt) ExecContext(ctx context.Context, args ...interface{}) (Result, error) {
+	org := time.Now()
+	res, err := stmt.Stmt.ExecContext(ctx, args...)
+	stmt.finished("EXECUTE STATEMENT\n"+stmt.query, args, org)
+	return res, err
+}
+
 func (stmt *profilerStmt) Query(args ...interface{}) (Rows, error) {
 	org := time.Now()
 	res, err := stmt.Stmt.Query(args...)
@@ -257,9 +333,16 @@ func (stmt *profilerStmt) Query(args ...interface{}) (Rows, error) {
 	return res, err
 }
 
-func (stmt *profilerStmt) QueryRow(args ...interface{}) Row {
+func (stmt *profilerStmt) QueryContext(ctx context.Context, args ...interface{}) (Rows, error) {
 	org := time.Now()
-	res := stmt.Stmt.QueryRow(args...)
+	res, err := stmt.Stmt.QueryContext(ctx, args...)
+	stmt.finished("QUERY STATEMENT\n"+stmt.query, args, org)
+	return res, err
+}
+
+func (stmt *profilerStmt) QueryRowContext(ctx context.Context, args ...interface{}) Row {
+	org := time.Now()
+	res := stmt.Stmt.QueryRowContext(ctx, args...)
 	stmt.finished("QUERY STATEMENT\n"+stmt.query, args, org)
 	return res
 }
@@ -316,10 +399,10 @@ func Open(
 // one being used as the master and the rest as slaves.
 func open(
 	dsc DSC,
-	reactorType DbId,
+	dbId DbId,
 ) (DB, error) {
-	if reactorType == 0 {
-		reactorType = PrimaryDatabase
+	if dbId == 0 {
+		dbId = PrimaryDatabase
 	}
 
 	if len(dsc.DSN) == 1 {
@@ -328,12 +411,12 @@ func open(
 			return nil, err
 		}
 		return &database1{
-			db:          db,
-			dsc:         dsc,
-			adapter:     adapter,
-			reactorType: reactorType,
-			composer:    composer{stop: make(chan struct{})},
-			Metrics:     new(Metrics),
+			db:       db,
+			dsc:      dsc,
+			adapter:  adapter,
+			dbId:     dbId,
+			composer: composer{stop: make(chan struct{})},
+			Metrics:  new(Metrics),
 		}, nil
 	}
 
@@ -343,12 +426,12 @@ func open(
 	}
 
 	db := &database2{
-		pdbs:        make([]*sql.DB, len(dsc.DSN)),
-		dsc:         dsc,
-		reactorType: reactorType,
-		adapter:     adapter,
-		composer:    composer{stop: make(chan struct{})},
-		Metrics:     new(Metrics),
+		pdbs:     make([]*sql.DB, len(dsc.DSN)),
+		dsc:      dsc,
+		dbId:     dbId,
+		adapter:  adapter,
+		composer: composer{stop: make(chan struct{})},
+		Metrics:  new(Metrics),
 	}
 
 	err = scatter(
@@ -365,13 +448,13 @@ func open(
 	return db, nil
 }
 
-func CloseOnError(db DB, err error) {
+func CloseOnError(ctx context.Context, db DB, err error) {
 	if err != nil {
-		_ = db.Close()
+		_ = db.Close(ctx)
 	} else {
 		e := recover()
 		if e != nil {
-			_ = db.Close()
+			_ = db.Close(ctx)
 			panic(e)
 		}
 	}

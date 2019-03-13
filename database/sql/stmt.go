@@ -18,6 +18,7 @@
 package sql
 
 import (
+	"context"
 	"database/sql"
 )
 
@@ -26,8 +27,11 @@ import (
 type Stmt interface {
 	Close() error
 	Exec(args ...interface{}) (Result, error)
+	ExecContext(ctx context.Context, args ...interface{}) (Result, error)
 	Query(args ...interface{}) (Rows, error)
+	QueryContext(ctx context.Context, args ...interface{}) (Rows, error)
 	QueryRow(args ...interface{}) Row
+	QueryRowContext(ctx context.Context, args ...interface{}) Row
 }
 
 // Statement for physical database (dbase)
@@ -59,12 +63,31 @@ func (s *stmt1) Exec(args ...interface{}) (Result, error) {
 	return &result{db: s.database, res: res}, nil
 }
 
+func (s *stmt1) ExecContext(ctx context.Context, args ...interface{}) (Result, error) {
+	started := s.database.beginExec()
+	res, err := s.stmt.ExecContext(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	s.database.endExec(started)
+	return &result{db: s.database, res: res}, nil
+}
+
 // Query executes a prepared query statement with the given
 // arguments and returns the query results as a *sql.Rows.
 // Query uses a slave as the underlying physical db.
 func (s *stmt1) Query(args ...interface{}) (Rows, error) {
 	started := s.database.beginQuery()
 	rs, err := s.stmt.Query(args...)
+	if err != nil {
+		return nil, err
+	}
+	return &rows{db: s.database, rs: rs, started: started}, nil
+}
+
+func (s *stmt1) QueryContext(ctx context.Context, args ...interface{}) (Rows, error) {
+	started := s.database.beginQuery()
+	rs, err := s.stmt.QueryContext(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +103,13 @@ func (s *stmt1) Query(args ...interface{}) (Rows, error) {
 func (s *stmt1) QueryRow(args ...interface{}) Row {
 	started := s.database.beginQuery()
 	r := s.stmt.QueryRow(args...)
+	s.database.endQuery(started)
+	return &row{db: s.database, r: r}
+}
+
+func (s *stmt1) QueryRowContext(ctx context.Context, args ...interface{}) Row {
+	started := s.database.beginQuery()
+	r := s.stmt.QueryRowContext(ctx, args...)
 	s.database.endQuery(started)
 	return &row{db: s.database, r: r}
 }
@@ -114,12 +144,31 @@ func (s *stmt2) Exec(args ...interface{}) (Result, error) {
 	return &result{db: s.db, res: res}, nil
 }
 
+func (s *stmt2) ExecContext(ctx context.Context, args ...interface{}) (Result, error) {
+	started := s.db.beginExec()
+	res, err := s.stmts[0].ExecContext(ctx, args...)
+	if err != nil {
+		return nil, err
+	}
+	s.db.endExec(started)
+	return &result{db: s.db, res: res}, nil
+}
+
 // Query executes a prepared query statement with the given
 // arguments and returns the query results as a *sql.Rows.
 // Query uses a slave as the underlying physical db.
 func (s *stmt2) Query(args ...interface{}) (Rows, error) {
 	started := s.db.beginQuery()
 	rs, err := s.stmts[s.db.slave(len(s.db.pdbs))].Query(args...)
+	if err != nil {
+		return nil, err
+	}
+	return &rows{db: s.db, rs: rs, started: started}, nil
+}
+
+func (s *stmt2) QueryContext(ctx context.Context, args ...interface{}) (Rows, error) {
+	started := s.db.beginQuery()
+	rs, err := s.stmts[s.db.slave(len(s.db.pdbs))].QueryContext(ctx, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -135,6 +184,13 @@ func (s *stmt2) Query(args ...interface{}) (Rows, error) {
 func (s *stmt2) QueryRow(args ...interface{}) Row {
 	started := s.db.beginQuery()
 	r := s.stmts[s.db.slave(len(s.db.pdbs))].QueryRow(args...)
+	s.db.endQuery(started)
+	return &row{db: s.db, r: r}
+}
+
+func (s *stmt2) QueryRowContext(ctx context.Context, args ...interface{}) Row {
+	started := s.db.beginQuery()
+	r := s.stmts[s.db.slave(len(s.db.pdbs))].QueryRowContext(ctx, args...)
 	s.db.endQuery(started)
 	return &row{db: s.db, r: r}
 }

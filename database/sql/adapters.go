@@ -18,6 +18,7 @@
 package sql
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strings"
@@ -78,10 +79,10 @@ func (adapter *mySqlAdater) DatabaseName(
 }
 
 // Lock database latch with context
-func (adapter *mySqlAdater) LockLocal(tx Tx, latch string, timeout int) error {
+func (adapter *mySqlAdater) LockLocal(ctx context.Context, tx Tx, latch string, timeout int) error {
 	var res int
-	query := "SELECT GET_LOCK(CONCAT(DATABASE(), '.', ?), ?)"
-	err := tx.QueryRow(query, latch, timeout).Scan(&res)
+	const query = "SELECT GET_LOCK(CONCAT(DATABASE(), '.', ?), ?)"
+	err := tx.QueryRowContext(ctx, query, latch, timeout).Scan(&res)
 	if err != nil {
 		return err
 	}
@@ -92,9 +93,10 @@ func (adapter *mySqlAdater) LockLocal(tx Tx, latch string, timeout int) error {
 }
 
 // Unlock database with context
-func (adapter *mySqlAdater) UnlockLocal(tx Tx, latch string) error {
+func (adapter *mySqlAdater) UnlockLocal(ctx context.Context, tx Tx, latch string) error {
 	var res NullInt64
-	err := tx.QueryRow("SELECT RELEASE_LOCK(CONCAT(DATABASE(), '.', ?))", latch).Scan(&res)
+	const query = "SELECT RELEASE_LOCK(CONCAT(DATABASE(), '.', ?))"
+	err := tx.QueryRowContext(ctx, query, latch).Scan(&res)
 	if err != nil {
 		return err
 	}
@@ -108,10 +110,10 @@ func (adapter *mySqlAdater) UnlockLocal(tx Tx, latch string) error {
 }
 
 // Lock database latch with context
-func (adapter *mySqlAdater) LockGlobal(tx Tx, latch string, timeout int) error {
+func (adapter *mySqlAdater) LockGlobal(ctx context.Context, tx Tx, latch string, timeout int) error {
 	var res int
-	query := "SELECT GET_LOCK(?, ?)"
-	err := tx.QueryRow(query, latch, timeout).Scan(&res)
+	const query = "SELECT GET_LOCK(?, ?)"
+	err := tx.QueryRowContext(ctx, query, latch, timeout).Scan(&res)
 	if err != nil {
 		return err
 	}
@@ -122,9 +124,10 @@ func (adapter *mySqlAdater) LockGlobal(tx Tx, latch string, timeout int) error {
 }
 
 // Unlock database with context
-func (adapter *mySqlAdater) UnlockGlobal(tx Tx, latch string) error {
+func (adapter *mySqlAdater) UnlockGlobal(ctx context.Context, tx Tx, latch string) error {
 	var res NullInt64
-	err := tx.QueryRow("SELECT RELEASE_LOCK(?)", latch).Scan(&res)
+	const query = "SELECT RELEASE_LOCK(?)"
+	err := tx.QueryRowContext(ctx, query, latch).Scan(&res)
 	if err != nil {
 		return err
 	}
