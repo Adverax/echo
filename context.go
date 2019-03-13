@@ -177,6 +177,12 @@ type Context interface {
 	// Redirect redirects the request to a provided URL with status code.
 	Redirect(code int, url string) error
 
+	// Refresh redirects the request to the corrent URL with status code.
+	Refresh(code int) error
+
+	// Revert redirects the request to a prev (referrer URL) address with status code.
+	Revert(code int) error
+
 	// Error invokes the registered HTTP error handler. Generally used by middleware.
 	Error(err error)
 
@@ -625,6 +631,14 @@ func (c *context) Redirect(code int, url string) error {
 	c.response.Header().Set(HeaderLocation, url)
 	c.response.WriteHeader(code)
 	return nil
+}
+
+func (c *context) Refresh(code int) error {
+	return c.Redirect(code, c.request.URL.String())
+}
+
+func (c *context) Revert(code int) error {
+	return c.Redirect(code, c.request.Referer())
 }
 
 func (c *context) Error(err error) {
