@@ -52,12 +52,12 @@ func (messages DefaultResourceManager) Fetch(
 	return "", nil
 }
 
-type DefaultDataSetManager map[uint32]data.Source
+type DefaultDataSetManager map[uint32]data.Set
 
 func (datasets DefaultDataSetManager) Fetch(
 	ctx stdContext.Context,
 	id uint32,
-) (data.Source, error) {
+) (data.Set, error) {
 	if ds, ok := datasets[id]; ok {
 		return ds, nil
 	}
@@ -94,6 +94,6 @@ var (
 		Loc:            time.UTC,
 		Messages:       DefaultMessages,
 		Resources:      DefaultResources,
-		DataSources:    DefaultDataSets,
+		DataSets:       DefaultDataSets,
 	}
 )

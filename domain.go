@@ -72,7 +72,7 @@ type Locale interface {
 	// Get resource translation into the current language
 	Resource(ctx stdContext.Context, id uint32) (string, error)
 	// Get data source translation into the current language
-	DataSource(ctx stdContext.Context, id uint32) (data.Source, error)
+	DataSet(ctx stdContext.Context, id uint32) (data.Set, error)
 }
 
 // MessageFamily for selected language
@@ -85,9 +85,9 @@ type ResourceFamily interface {
 	Fetch(ctx stdContext.Context, id uint32) (string, error)
 }
 
-// DataSourceFamily for selected language
-type DataSourceFamily interface {
-	Fetch(ctx stdContext.Context, id uint32) (data.Source, error)
+// DataSetFamily for selected language
+type DataSetFamily interface {
+	Fetch(ctx stdContext.Context, id uint32) (data.Set, error)
 }
 
 // BaseLocale is a simple Locale structure.
@@ -100,9 +100,9 @@ type BaseLocale struct {
 	TZone uint16 // Timezone identifier
 	Loc   *time.Location
 
-	Messages    MessageFamily
-	Resources   ResourceFamily
-	DataSources DataSourceFamily
+	Messages  MessageFamily
+	Resources ResourceFamily
+	DataSets  DataSetFamily
 }
 
 func (loc *BaseLocale) Language() uint16 {
@@ -149,8 +149,8 @@ func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, erro
 	return loc.Resources.Fetch(ctx, id)
 }
 
-func (loc *BaseLocale) DataSource(ctx stdContext.Context, id uint32) (data.Source, error) {
-	return loc.DataSources.Fetch(ctx, id)
+func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (data.Set, error) {
+	return loc.DataSets.Fetch(ctx, id)
 }
 
 // Validation error can be translated into target language.

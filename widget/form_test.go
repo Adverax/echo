@@ -35,7 +35,7 @@ func TestRenderFormElement(t *testing.T) {
 		dst string
 	}
 
-	cities := data.NewSource(
+	cities := data.NewSet(
 		map[string]string{
 			"1": "London",
 			"2": "Paris",
@@ -194,7 +194,7 @@ func TestFormComponent_SetValue(t *testing.T) {
 		errors echo.ValidationErrors
 	}
 
-	cities := data.NewSource(
+	cities := data.NewSet(
 		map[string]string{
 			"1": "London",
 			"2": "Paris",

@@ -567,8 +567,8 @@ func (w *FormFileInput) Upload(
 // Notice: Field Codec must be ignored (internal and external representations are same).
 type FormSelector struct {
 	FormField
-	Required bool        // Value is required
-	Items    data.Source // Field items
+	Required bool     // Value is required
+	Items    data.Set // Field items
 }
 
 func (w *FormSelector) Render(
@@ -721,8 +721,8 @@ func (w *FormCheckBox) SetValue(
 // FormSubmit represents action Submit
 type FormSubmit struct {
 	FormField
-	Required bool        // Value is required
-	Items    data.Source // Optional set of values
+	Required bool     // Value is required
+	Items    data.Set // Optional set of values
 }
 
 func (w *FormSubmit) Render(

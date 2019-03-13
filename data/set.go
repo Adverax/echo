@@ -31,20 +31,20 @@ type PairEnumerator interface {
 
 type PairEnumeratorFunc func(key, value string) error
 
-// Abstract data source
+// Abstract data set
 // Worked with literal representation keys and values.
-type Source interface {
+type Set interface {
 	PairEnumerator
 	Has(key string) bool
 	Length() int
 }
 
-// Map of DataSource by language code.
-type Sources map[uint16]Source // DataSource by language
+// Map of Set by language code.
+type Sets map[uint16]Set // Set by language
 
-// DataSource provider
-type SourceProvider interface {
-	DataSet(ctx context.Context) (Source, error)
+// Set provider
+type SetProvider interface {
+	DataSet(ctx context.Context) (Set, error)
 }
 
 // Simple pair of key and value
@@ -67,18 +67,18 @@ func (index index) Swap(i, j int) {
 	index[i], index[j] = index[j], index[i]
 }
 
-// DataSource implementation/
-type dataSet struct {
+// Set implementation
+type set struct {
 	items map[string]string
 	index index
 }
 
-func (ds *dataSet) Has(key string) bool {
+func (ds *set) Has(key string) bool {
 	_, has := ds.items[key]
 	return has
 }
 
-func (ds *dataSet) Enumerate(
+func (ds *set) Enumerate(
 	ctx context.Context,
 	action PairEnumeratorFunc,
 ) error {
@@ -94,15 +94,15 @@ func (ds *dataSet) Enumerate(
 	return nil
 }
 
-func (ds *dataSet) Length() int {
+func (ds *set) Length() int {
 	return len(ds.index)
 }
 
-// Create new DataSource from map
-func NewSource(
+// Create new Set from map
+func NewSet(
 	items map[string]string, // Map of items
 	sorted bool, // If you want sort items by alphabetically.
-) Source {
+) Set {
 	index := make(index, 0, len(items))
 
 	for key, val := range items {
@@ -113,30 +113,30 @@ func NewSource(
 		sort.Sort(index)
 	}
 
-	return &dataSet{
+	return &set{
 		items: items,
 		index: index,
 	}
 }
 
-// Create new DataSource from list.
-func NewSourceFromList(
+// Create new Set from list.
+func NewSetFromList(
 	items []string, // Slice of items
 	sorted bool, // If you want sort items by alphabetically.
-) Source {
+) Set {
 	m := make(map[string]string, len(items))
 	for index, val := range items {
 		key := strconv.FormatInt(int64(index)+1, 10)
 		m[key] = val
 	}
 
-	return NewSource(m, sorted)
+	return NewSet(m, sorted)
 }
 
-var EmptyDataSet = NewSource(make(map[string]string), false)
+var EmptySet = NewSet(make(map[string]string), false)
 
 // Create DataSource from literal representation
-// DATA SOURCE FORMAT:
+// DATA SET FORMAT:
 // The source may have a headline or not. In the absence of a headline, a list is implied.
 // Each element is located on a separate line.
 // Each line can end with a comment, that starts from "#".
@@ -160,29 +160,29 @@ var EmptyDataSet = NewSource(make(map[string]string), false)
 // The numbering of elements starts from one (used only if the key is omitted). The next item is max + 1.
 // Blank lines (or "_" lines) have code, but are not displayed.
 // Empty characters at the beginning and end of the line are ignored.
-func ParseDataSet(source string) Source {
+func ParseSet(source string) Set {
 	source = strings.TrimSpace(source)
 	if source == "" {
-		return EmptyDataSet
+		return EmptySet
 	}
 
 	lines := strings.Split(source, "\n")
 	head := lines[0]
 	if strings.HasPrefix(head, "#!") {
-		lines = parseDataSetSkipSpace(lines[1:])
-		list, sorted, delimiter := parseDataSetHeader(head[2:])
+		lines = parseSetSkipSpace(lines[1:])
+		list, sorted, delimiter := parseSetHeader(head[2:])
 		if list {
-			return parseDataSetList(lines, sorted)
+			return parseSetList(lines, sorted)
 		} else {
-			return parseDataSetMap(lines, sorted, delimiter)
+			return parseSetMap(lines, sorted, delimiter)
 		}
 	}
 
-	lines = parseDataSetSkipSpace(lines)
-	return parseDataSetList(lines, false)
+	lines = parseSetSkipSpace(lines)
+	return parseSetList(lines, false)
 }
 
-func parseDataSetSkipSpace(lines []string) []string {
+func parseSetSkipSpace(lines []string) []string {
 	for i, s := range lines {
 		cols := strings.SplitN(s, "#", 2)
 		lines[i] = strings.TrimSpace(cols[0])
@@ -190,7 +190,7 @@ func parseDataSetSkipSpace(lines []string) []string {
 	return lines
 }
 
-func parseDataSetHeader(
+func parseSetHeader(
 	source string,
 ) (
 	list bool,
@@ -223,23 +223,23 @@ func parseDataSetHeader(
 	return list, sorted, delimiter
 }
 
-func parseDataSetList(
+func parseSetList(
 	lines []string,
 	sorted bool,
-) Source {
+) Set {
 	if len(lines) == 0 {
-		return EmptyDataSet
+		return EmptySet
 	}
-	return NewSourceFromList(lines, sorted)
+	return NewSetFromList(lines, sorted)
 }
 
-func parseDataSetMap(
+func parseSetMap(
 	lines []string,
 	sorted bool,
 	delimiter string,
-) Source {
+) Set {
 	if len(lines) == 0 {
-		return EmptyDataSet
+		return EmptySet
 	}
 
 	enum := make(map[string]string, len(lines))
@@ -267,5 +267,5 @@ func parseDataSetMap(
 		key++
 	}
 
-	return NewSource(enum, sorted)
+	return NewSet(enum, sorted)
 }

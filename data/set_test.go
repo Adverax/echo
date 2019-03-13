@@ -23,8 +23,8 @@ import (
 	"testing"
 )
 
-func TestNewDataSet(t *testing.T) {
-	ds := NewSource(
+func TestNewSet(t *testing.T) {
+	ds := NewSet(
 		map[string]string{
 			"a": "1",
 			"b": "2",
@@ -52,8 +52,8 @@ func TestNewDataSet(t *testing.T) {
 	assert.False(t, ds.Has("e"))
 }
 
-func TestParseDataSet(t *testing.T) {
-	ds := ParseDataSet(`
+func TestParseSet(t *testing.T) {
+	ds := ParseSet(`
 #! MAP SORTED DELIMITER ::
 1::London
 2::New York

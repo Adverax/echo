@@ -17,7 +17,10 @@
 
 package data
 
-import "context"
+import (
+	"context"
+	"errors"
+)
 
 const (
 	SortAsc  Sorting = true
@@ -44,3 +47,7 @@ type Provider interface {
 	// Go to next row
 	Next(ctx context.Context) error
 }
+
+var (
+	ErrNoMatch = errors.New("no match")
+)

@@ -259,7 +259,6 @@ var (
 	ErrInvalidRedirectCode         = errors.New("invalid redirect status code")
 	ErrCookieNotFound              = errors.New("cookie not found")
 	ErrInvalidCertOrKeyType        = errors.New("invalid cert or key type, must be string or []byte")
-	ErrNoMatch                     = errors.New("no match")
 	ErrAbort                       = errors.New("abort")
 )
 
