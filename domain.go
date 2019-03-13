@@ -149,11 +149,16 @@ func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (data.Set, err
 
 // Validation error can be translated into target language.
 type ValidationError interface {
+	error
 	Translate(ctx Context) (string, error)
 }
 
 type simpleValidationError struct {
 	id uint32
+}
+
+func (e *simpleValidationError) Error() string {
+	return "Validation error"
 }
 
 func (e *simpleValidationError) Translate(
