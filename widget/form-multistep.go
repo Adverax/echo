@@ -315,7 +315,7 @@ func (w *MultiStepForm) Execute(
 		if err != nil {
 			return
 		}
-		if !model.HasErrors() {
+		if model.IsValid() {
 			// Store state
 			for _, item := range model {
 				if field, ok := item.(echo.ModelField); ok {

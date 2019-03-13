@@ -251,8 +251,8 @@ func (field *FormField) GetErrors() echo.ValidationErrors {
 }
 
 // Test for errors
-func (field *FormField) HasErrors() bool {
-	return len(field.errors) != 0
+func (field *FormField) IsValid() bool {
+	return len(field.errors) == 0
 }
 
 // Reset field to initial state
@@ -619,7 +619,7 @@ func (w *FormSelector) SetValue(
 ) error {
 	aVal, aValue := w.val, w.value
 	defer func() {
-		if w.HasErrors() {
+		if !w.IsValid() {
 			w.val, w.value = aVal, aValue
 		}
 	}()
@@ -774,7 +774,7 @@ func (w *FormSubmit) SetValue(
 ) error {
 	aVal, aValue := w.val, w.value
 	defer func() {
-		if w.HasErrors() {
+		if !w.IsValid() {
 			w.val, w.value = aVal, aValue
 		}
 	}()

@@ -48,22 +48,22 @@ func myLoginHandler(ctx echo.Context) error {
 			return err
 		}
 
-		if model.HasErrors() {
-			// Show form
+		if model.IsValid() {
+            // Record is valid
 			...
 			return nil
 		}
 	}
 
-	// Record valid
+	// Show form
 	...
 	return nil
 */
 
 // Abstract field. Implemented by descendands of field.
 type ModelField interface {
-	// Field has errors
-	HasErrors() bool
+	// Field has no errors
+	IsValid() bool
 	// Get list of validation errors
 	GetErrors() ValidationErrors
 	// Get name of field
@@ -208,19 +208,19 @@ func (model Model) BindFrom(
 	return nil
 }
 
-func (model Model) HasErrors() bool {
+func (model Model) IsValid() bool {
 	for _, item := range model {
 		if field, ok := item.(ModelField); ok {
 			if field == nil {
 				continue
 			}
-			if field.HasErrors() {
-				return true
+			if !field.IsValid() {
+				return false
 			}
 		}
 	}
 
-	return false
+	return true
 }
 
 type Models []Model
@@ -238,9 +238,9 @@ func (models Models) Bind(
 	return nil
 }
 
-func (models Models) HasErrors() bool {
+func (models Models) IsValid() bool {
 	for _, model := range models {
-		if model != nil && model.HasErrors() {
+		if model != nil && model.IsValid() {
 			return true
 		}
 	}
