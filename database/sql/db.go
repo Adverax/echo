@@ -410,10 +410,7 @@ func (rows *rows) Close() error {
 func (rows *rows) Err() error {
 	err := rows.rs.Err()
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return ErrNoRows
-		}
-		return err
+		return recode(err)
 	}
 	return nil
 }
@@ -557,10 +554,7 @@ func (db *database1) Query(query string, args ...interface{}) (Rows, error) {
 	started := db.beginQuery()
 	rs, err := db.db.Query(query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
 }
@@ -569,10 +563,7 @@ func (db *database1) QueryContext(ctx context.Context, query string, args ...int
 	started := db.beginQuery()
 	rs, err := db.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
 }
@@ -794,10 +785,7 @@ func (db *database2) Query(query string, args ...interface{}) (Rows, error) {
 	started := db.beginQuery()
 	rs, err := db.pdbs[db.slave(len(db.pdbs))].Query(query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
 }
@@ -806,10 +794,7 @@ func (db *database2) QueryContext(ctx context.Context, query string, args ...int
 	started := db.beginQuery()
 	rs, err := db.pdbs[db.slave(len(db.pdbs))].QueryContext(ctx, query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
 }
@@ -972,10 +957,7 @@ func (t *tx) Query(query string, args ...interface{}) (Rows, error) {
 	started := t.db.beginQuery()
 	rs, err := t.trans.Query(query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: t.db, rs: rs, started: started}, nil
 }
@@ -984,10 +966,7 @@ func (t *tx) QueryContext(ctx context.Context, query string, args ...interface{}
 	started := t.db.beginQuery()
 	rs, err := t.trans.QueryContext(ctx, query, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: t.db, rs: rs, started: started}, nil
 }
@@ -1123,6 +1102,14 @@ func (repository *repository) transaction(
 
 func NewRepository(db DB) Repository {
 	return &repository{db: db}
+}
+
+func recode(err error) error {
+	if err == sql.ErrNoRows {
+		return ErrNoRows
+	}
+
+	return err
 }
 
 // todo: Handle failovers on slaves

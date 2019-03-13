@@ -80,10 +80,7 @@ func (s *stmt1) Query(args ...interface{}) (Rows, error) {
 	started := s.database.beginQuery()
 	rs, err := s.stmt.Query(args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: s.database, rs: rs, started: started}, nil
 }
@@ -92,10 +89,7 @@ func (s *stmt1) QueryContext(ctx context.Context, args ...interface{}) (Rows, er
 	started := s.database.beginQuery()
 	rs, err := s.stmt.QueryContext(ctx, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: s.database, rs: rs, started: started}, nil
 }
@@ -167,10 +161,7 @@ func (s *stmt2) Query(args ...interface{}) (Rows, error) {
 	started := s.db.beginQuery()
 	rs, err := s.stmts[s.db.slave(len(s.db.pdbs))].Query(args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: s.db, rs: rs, started: started}, nil
 }
@@ -179,10 +170,7 @@ func (s *stmt2) QueryContext(ctx context.Context, args ...interface{}) (Rows, er
 	started := s.db.beginQuery()
 	rs, err := s.stmts[s.db.slave(len(s.db.pdbs))].QueryContext(ctx, args...)
 	if err != nil {
-		if err == sql.ErrNoRows {
-			return nil, ErrNoRows
-		}
-		return nil, err
+		return nil, recode(err)
 	}
 	return &rows{db: s.db, rs: rs, started: started}, nil
 }
