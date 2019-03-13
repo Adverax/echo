@@ -28,6 +28,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 )
 
@@ -409,6 +410,9 @@ func (rows *rows) Close() error {
 func (rows *rows) Err() error {
 	err := rows.rs.Err()
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return ErrNoRows
+		}
 		return err
 	}
 	return nil
@@ -553,6 +557,9 @@ func (db *database1) Query(query string, args ...interface{}) (Rows, error) {
 	started := db.beginQuery()
 	rs, err := db.db.Query(query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoRows
+		}
 		return nil, err
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
@@ -562,6 +569,9 @@ func (db *database1) QueryContext(ctx context.Context, query string, args ...int
 	started := db.beginQuery()
 	rs, err := db.db.QueryContext(ctx, query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoRows
+		}
 		return nil, err
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
@@ -784,6 +794,9 @@ func (db *database2) Query(query string, args ...interface{}) (Rows, error) {
 	started := db.beginQuery()
 	rs, err := db.pdbs[db.slave(len(db.pdbs))].Query(query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoRows
+		}
 		return nil, err
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
@@ -793,6 +806,9 @@ func (db *database2) QueryContext(ctx context.Context, query string, args ...int
 	started := db.beginQuery()
 	rs, err := db.pdbs[db.slave(len(db.pdbs))].QueryContext(ctx, query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoRows
+		}
 		return nil, err
 	}
 	return &rows{db: db, rs: rs, started: started}, nil
@@ -956,6 +972,9 @@ func (t *tx) Query(query string, args ...interface{}) (Rows, error) {
 	started := t.db.beginQuery()
 	rs, err := t.trans.Query(query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoRows
+		}
 		return nil, err
 	}
 	return &rows{db: t.db, rs: rs, started: started}, nil
@@ -965,6 +984,9 @@ func (t *tx) QueryContext(ctx context.Context, query string, args ...interface{}
 	started := t.db.beginQuery()
 	rs, err := t.trans.QueryContext(ctx, query, args...)
 	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, ErrNoRows
+		}
 		return nil, err
 	}
 	return &rows{db: t.db, rs: rs, started: started}, nil
@@ -1028,7 +1050,7 @@ func (t *txx) Rollback() error {
 }
 
 var (
-	ErrNoRows         = sql.ErrNoRows
+	ErrNoRows         = data.ErrNoMatch
 	ErrTxDone         = sql.ErrTxDone
 	ErrUnknownDriver  = errors.New("unknown driver")
 	ErrCaptureLock    = errors.New("timeout of latch")
