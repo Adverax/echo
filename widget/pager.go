@@ -184,7 +184,7 @@ func (w *Pager) execute(
 
 		err = w.Provider.Import(
 			ctx,
-			data.Pagination{
+			&data.Pagination{
 				Offset: int64(capacity) * int64(info.CurPage-1),
 				Limit:  int64(capacity),
 			},

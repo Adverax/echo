@@ -52,7 +52,7 @@ func (provider *dataProviderMock) Total(ctx stdContext.Context) (int, error) {
 	return len(provider.all), nil
 }
 
-func (provider *dataProviderMock) Import(ctx stdContext.Context, pagination data.Pagination) error {
+func (provider *dataProviderMock) Import(ctx stdContext.Context, pagination *data.Pagination) error {
 	provider.index = 0
 	last := pagination.Offset + pagination.Limit
 	if last < int64(len(provider.all)) {

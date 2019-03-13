@@ -43,7 +43,7 @@ type Provider interface {
 	// Get total records count
 	Total(ctx context.Context) (int, error)
 	// Import records
-	Import(ctx context.Context, pagination Pagination) error
+	Import(ctx context.Context, pagination *Pagination) error
 	// Go to next row
 	Next(ctx context.Context) error
 }
