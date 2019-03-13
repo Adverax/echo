@@ -192,7 +192,7 @@ func TestRenderWidget(t *testing.T) {
 					},
 					Provider: provider,
 				},
-				Designer: func() (interface{}, error) {
+				Data: func() (interface{}, error) {
 					return fmt.Sprintf("Key=%s, Value=%s", provider.row.Key, provider.row.Value), nil
 				},
 			},
@@ -246,20 +246,20 @@ func TestRenderWidget(t *testing.T) {
 				Columns: TableColumns{
 					"Key": {
 						Label: "Key",
-						Designer: func() (interface{}, error) {
+						Data: func() (interface{}, error) {
 							return provider.row.Key, nil
 						},
 					},
 					"Value": {
 						Label: "Value",
-						Designer: func() (interface{}, error) {
+						Data: func() (interface{}, error) {
 							return provider.row.Value, nil
 						},
 					},
 					"Hidden": {
 						Label:  "Hidden",
 						Hidden: true,
-						Designer: func() (interface{}, error) {
+						Data: func() (interface{}, error) {
 							return "hidden", nil
 						},
 					},

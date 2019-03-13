@@ -34,7 +34,7 @@ type GuidMaker interface {
 	CreateGuid() uint64
 }
 
-type DesignerFunc func() (interface{}, error)
+type DataFunc func() (interface{}, error)
 
 type ExpanderFund func(data map[string]interface{}) error
 

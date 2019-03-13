@@ -25,7 +25,7 @@ import (
 type TableColumn struct {
 	Label    interface{}  // Column label
 	Hidden   bool         // Column is hidden
-	Designer DesignerFunc // Column designer
+	Data     DataFunc     // Column data
 	Expander ExpanderFund // Column expander
 }
 
@@ -244,7 +244,7 @@ func (w *Table) renderRow(
 			continue
 		}
 
-		value, err := c.Designer()
+		value, err := c.Data()
 		if err != nil {
 			return nil, err
 		}

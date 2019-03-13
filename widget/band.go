@@ -24,9 +24,9 @@ import (
 // Widget for display band of items.
 // Widget supports pager for navigate between pages.
 type Band struct {
-	Pager                 // Pager info
-	Designer DesignerFunc // Custom designer
-	Hidden   bool         // Band is hidden
+	Pager           // Pager info
+	Data   DataFunc // Custom data
+	Hidden bool     // Band is hidden
 }
 
 func (w *Band) Render(ctx echo.Context) (interface{}, error) {
@@ -65,7 +65,7 @@ func (w *Band) renderItems(
 			}
 		}
 
-		item, err := w.Designer()
+		item, err := w.Data()
 		if err != nil {
 			return nil, err
 		}
