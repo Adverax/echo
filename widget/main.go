@@ -213,6 +213,10 @@ func (w DECIMAL) Render(ctx echo.Context) (interface{}, error) {
 // Message
 type MESSAGE uint32
 
+func (w MESSAGE) Error() string {
+	return "Validation error: "
+}
+
 func (w MESSAGE) Render(ctx echo.Context) (interface{}, error) {
 	msg, err := w.String(ctx)
 	if err != nil {
