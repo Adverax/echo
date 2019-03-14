@@ -25,8 +25,6 @@ import (
 	"net/http"
 	"net/url"
 	"time"
-
-	"github.com/adverax/echo/data"
 )
 
 const (
@@ -107,7 +105,7 @@ type Locale interface {
 	// Get resource translation into the current language
 	Resource(ctx stdContext.Context, id uint32) (string, error)
 	// Get data source translation into the current language
-	DataSet(ctx stdContext.Context, id uint32) (data.Set, error)
+	DataSet(ctx stdContext.Context, id uint32) (DataSet, error)
 }
 
 // MessageFamily for selected language
@@ -122,7 +120,7 @@ type ResourceFamily interface {
 
 // DataSetFamily for selected language
 type DataSetFamily interface {
-	Fetch(ctx stdContext.Context, id uint32) (data.Set, error)
+	Fetch(ctx stdContext.Context, id uint32) (DataSet, error)
 }
 
 // BaseLocale is a simple Locale structure.
@@ -184,7 +182,7 @@ func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, erro
 	return loc.Resources.Fetch(ctx, id)
 }
 
-func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (data.Set, error) {
+func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (DataSet, error) {
 	return loc.DataSets.Fetch(ctx, id)
 }
 

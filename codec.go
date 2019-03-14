@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 )
 
@@ -45,19 +44,19 @@ type Codec interface {
 type PairCodec interface {
 	Codec
 	PairEnumerator
-	data.SetProvider
+	DataSetProvider
 }
 
 // Pair enumerator
 type PairEnumerator interface {
-	Enumerate(ctx Context, action data.PairEnumeratorFunc) error
+	Enumerate(ctx Context, action PairConsumer) error
 }
 
-type PairEnumeratorFunc func(ctx Context, action data.PairEnumeratorFunc) error
+type PairConsumer func(key string, value string) error
 
-func (fn PairEnumeratorFunc) Enumerate(ctx Context, action data.PairEnumeratorFunc) error {
+/*func (fn PairEnumeratorFunc) Enumerate(ctx Context, action PairEnumeratorFunc) error {
 	return fn(ctx, action)
-}
+}*/
 
 type ValidatorText interface {
 	Validate(ctx Context, value string) error

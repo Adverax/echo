@@ -20,7 +20,6 @@ package widget
 import (
 	"encoding/json"
 	"github.com/adverax/echo"
-	"github.com/adverax/echo/data"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"net/http"
@@ -35,7 +34,7 @@ func TestRenderFormElement(t *testing.T) {
 		dst string
 	}
 
-	cities := data.NewSet(
+	cities := echo.NewDataSet(
 		map[string]string{
 			"1": "London",
 			"2": "Paris",
@@ -194,7 +193,7 @@ func TestFormComponent_SetValue(t *testing.T) {
 		errors echo.ValidationErrors
 	}
 
-	cities := data.NewSet(
+	cities := echo.NewDataSet(
 		map[string]string{
 			"1": "London",
 			"2": "Paris",

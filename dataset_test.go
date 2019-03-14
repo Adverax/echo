@@ -15,16 +15,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package data
+package echo
 
 import (
-	"context"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-func TestNewSet(t *testing.T) {
-	ds := NewSet(
+func TestNewDataSet(t *testing.T) {
+	ds := NewDataSet(
 		map[string]string{
 			"a": "1",
 			"b": "2",
@@ -33,10 +33,12 @@ func TestNewSet(t *testing.T) {
 		true,
 	)
 
+	e := New()
+	ctx := e.NewContext(nil, nil)
 	// Check enumeration
 	var keys, values string
 	err := ds.Enumerate(
-		context.Background(),
+		ctx,
 		func(key, value string) error {
 			keys += key
 			values += value
@@ -52,8 +54,8 @@ func TestNewSet(t *testing.T) {
 	assert.False(t, ds.Has("e"))
 }
 
-func TestParseSet(t *testing.T) {
-	ds := ParseSet(`
+func TestParseDataSet(t *testing.T) {
+	ds := ParseDataSet(`
 #! MAP SORTED DELIMITER ::
 1::London
 2::New York

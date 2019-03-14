@@ -20,13 +20,12 @@ package echo
 import (
 	stdContext "context"
 	"fmt"
-	"github.com/adverax/echo/data"
-	"github.com/adverax/echo/generic"
 	"net/http"
 	"net/url"
 	"time"
 
 	"github.com/adverax/echo/cache/memory"
+	"github.com/adverax/echo/generic"
 )
 
 type DefaultMessageManager map[uint32]string
@@ -55,12 +54,12 @@ func (messages DefaultResourceManager) Fetch(
 	return "", nil
 }
 
-type DefaultDataSetManager map[uint32]data.Set
+type DefaultDataSetManager map[uint32]DataSet
 
 func (datasets DefaultDataSetManager) Fetch(
 	ctx stdContext.Context,
 	id uint32,
-) (data.Set, error) {
+) (DataSet, error) {
 	if ds, ok := datasets[id]; ok {
 		return ds, nil
 	}
