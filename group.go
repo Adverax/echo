@@ -5,6 +5,28 @@ import (
 	"path"
 )
 
+// Abstract VUX interface
+type Mux interface {
+	Pre(middleware ...MiddlewareFunc)
+	Use(middleware ...MiddlewareFunc)
+	CONNECT(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	DELETE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	GET(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	HEAD(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	OPTIONS(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	PATCH(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	POST(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	PUT(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	TRACE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
+	Any(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route
+	Match(methods []string, path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route
+	Static(prefix, root string) *Route
+	File(path, file string, m ...MiddlewareFunc) *Route
+	Add(method, path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route
+	Group(prefix string, m ...MiddlewareFunc) (g *Group)
+	Route(prefix string, fn func(g *Group), middleware ...MiddlewareFunc)
+}
+
 type (
 	// Group is a set of sub-routes for a specified route. It can be used for inner
 	// routes that share a common middleware or functionality that should be separate
@@ -15,6 +37,18 @@ type (
 		echo       *Echo
 	}
 )
+
+// Pre implements `Echo#pre()` for sub-routes within the Group.
+func (g *Group) Pre(middleware ...MiddlewareFunc) {
+	g.middleware = append(middleware, g.middleware...)
+	// Allow all requests to reach the group as they might get dropped if router
+	// doesn't find a match, making none of the group middleware process.
+	for _, p := range []string{"", "/*"} {
+		g.echo.Any(path.Clean(g.prefix+p), func(c Context) error {
+			return NotFoundHandler(c)
+		}, g.middleware...)
+	}
+}
 
 // Use implements `Echo#Use()` for sub-routes within the Group.
 func (g *Group) Use(middleware ...MiddlewareFunc) {
@@ -99,14 +133,21 @@ func (g *Group) Group(prefix string, middleware ...MiddlewareFunc) *Group {
 	return g.echo.Group(g.prefix+prefix, m...)
 }
 
+// Group creates a new sub-group with prefix and optional sub-group-level middleware.
+// After that, routine calls custom function with this group.
+func (g *Group) Route(prefix string, fn func(g *Group), middleware ...MiddlewareFunc) {
+	fn(g.Group(prefix, middleware...))
+	return
+}
+
 // Static implements `Echo#Static()` for sub-routes within the Group.
-func (g *Group) Static(prefix, root string) {
-	static(g, prefix, root)
+func (g *Group) Static(prefix, root string) *Route {
+	return static(g, prefix, root)
 }
 
 // File implements `Echo#File()` for sub-routes within the Group.
-func (g *Group) File(path, file string) {
-	g.echo.File(g.prefix+path, file)
+func (g *Group) File(path, file string, m ...MiddlewareFunc) *Route {
+	return g.echo.File(g.prefix+path, file, m...)
 }
 
 // Add implements `Echo#Add()` for sub-routes within the Group.

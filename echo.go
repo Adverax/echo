@@ -501,6 +501,13 @@ func (e *Echo) Group(prefix string, m ...MiddlewareFunc) (g *Group) {
 	return
 }
 
+// Route creates a new router group with prefix and optional group-level middleware and
+// after that calls custom function with this group.
+func (e *Echo) Route(prefix string, fn func(g *Group), middleware ...MiddlewareFunc) {
+	fn(e.Group(prefix, middleware...))
+	return
+}
+
 // URI generates a URI from handler.
 func (e *Echo) URI(handler HandlerFunc, params ...interface{}) string {
 	name := handlerName(handler)
