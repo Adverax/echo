@@ -53,6 +53,12 @@ type PairEnumerator interface {
 	Enumerate(ctx Context, action data.PairEnumeratorFunc) error
 }
 
+type PairEnumeratorFunc func(ctx Context, action data.PairEnumeratorFunc) error
+
+func (fn PairEnumeratorFunc) Enumerate(ctx Context, action data.PairEnumeratorFunc) error {
+	return fn(ctx, action)
+}
+
 type ValidatorText interface {
 	Validate(ctx Context, value string) error
 }
