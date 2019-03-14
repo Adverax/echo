@@ -70,4 +70,12 @@ func TestParseDataSet(t *testing.T) {
 	check("1", "London")
 	check("2", "New York")
 	check("3", "Paris")
+
+	v, has := ds.Decode("1")
+	assert.True(t, has)
+	assert.Equal(t, "London", v)
+
+	v, has = ds.Encode("London")
+	assert.True(t, has)
+	assert.Equal(t, "1", v)
 }

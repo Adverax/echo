@@ -29,8 +29,8 @@ type DataSet interface {
 	PairEnumerator
 	Has(key string) bool
 	Length() int
-	Encode(ctx Context, value string) (string, bool)
-	Decode(ctx Context, value string) (string, bool)
+	Encode(value string) (string, bool)
+	Decode(value string) (string, bool)
 }
 
 // Map of DataSet by language code.
@@ -68,14 +68,14 @@ type dataSet struct {
 	index    index
 }
 
-func (ds *dataSet) Encode(ctx Context, value string) (string, bool) {
+func (ds *dataSet) Encode(value string) (string, bool) {
 	if val, ok := ds.encoders[value]; ok {
 		return val, true
 	}
 	return "", false
 }
 
-func (ds *dataSet) Decode(ctx Context, value string) (string, bool) {
+func (ds *dataSet) Decode(value string) (string, bool) {
 	if val, ok := ds.decoders[value]; ok {
 		return val, true
 	}
