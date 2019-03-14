@@ -19,9 +19,10 @@ package echo
 
 import (
 	"fmt"
+	"strconv"
+
 	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
-	"strconv"
 )
 
 // Encoder used for encode value to internal representation
@@ -307,6 +308,78 @@ func (codec *Decimal) Decode(ctx Context, value interface{}) (string, error) {
 func (codec *Decimal) IsEmpty(value interface{}) bool {
 	val, _ := generic.ConvertToFloat64(value)
 	return val == 0
+}
+
+// Abstract value formatter
+type Formatter interface {
+	Format(ctx Context, value interface{}) (val interface{}, err error)
+}
+
+// Formatter, that based on codec.Decode method
+type BaseFormatter struct {
+	Decoder
+	ShowEmpty bool
+}
+
+func (w *BaseFormatter) Format(
+	ctx Context,
+	value interface{},
+) (interface{}, error) {
+	c := w.Decoder
+	if c == nil {
+		c = TextCodec
+	}
+
+	if !w.ShowEmpty {
+		if cc, ok := c.(Empty); ok {
+			if cc.IsEmpty(value) {
+				return "", nil
+			}
+		}
+	}
+
+	val, err := c.Decode(ctx, value)
+	if err != nil {
+		return "", err
+	}
+
+	return val, nil
+}
+
+// Abstract value converter
+type Converter interface {
+	Codec
+	Formatter
+}
+
+type converter struct {
+	Codec
+	Formatter
+}
+
+func NewConverter(codec Codec) Converter {
+	return &converter{
+		Codec:     codec,
+		Formatter: &BaseFormatter{Decoder: codec},
+	}
+}
+
+// Abstract pair converter
+type PairConverter interface {
+	PairCodec
+	Formatter
+}
+
+type pairConverter struct {
+	PairCodec
+	Formatter
+}
+
+func NewPairConverter(codec PairCodec) PairConverter {
+	return &pairConverter{
+		PairCodec: codec,
+		Formatter: &BaseFormatter{Decoder: codec},
+	}
 }
 
 var (

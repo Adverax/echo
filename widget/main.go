@@ -43,48 +43,12 @@ type Stringer interface {
 	String(ctx echo.Context) (string, error)
 }
 
-// Abstract value formatter
-type Formatter interface {
-	Format(ctx echo.Context, value interface{}) (val interface{}, err error)
-}
-
-// Formatter, that based on codec.Decode method
-type BaseFormatter struct {
-	echo.Decoder
-	ShowEmpty bool
-}
-
-func (w *BaseFormatter) Format(
-	ctx echo.Context,
-	value interface{},
-) (interface{}, error) {
-	c := w.Decoder
-	if c == nil {
-		c = echo.TextCodec
-	}
-
-	if !w.ShowEmpty {
-		if cc, ok := c.(echo.Empty); ok {
-			if cc.IsEmpty(value) {
-				return "", nil
-			}
-		}
-	}
-
-	val, err := c.Decode(ctx, value)
-	if err != nil {
-		return "", err
-	}
-
-	return val, nil
-}
-
 var (
-	BoolFormatter     Formatter
-	TextFormatter     = &BaseFormatter{Decoder: echo.TextCodec}
-	SignedFormatter   = &BaseFormatter{Decoder: echo.SignedCodec}
-	UnsignedFormatter = &BaseFormatter{Decoder: echo.UnsignedCodec}
-	DecimalFormatter  = &BaseFormatter{Decoder: echo.DecimalCodec}
+	BoolFormatter     echo.Formatter
+	TextFormatter     = &echo.BaseFormatter{Decoder: echo.TextCodec}
+	SignedFormatter   = &echo.BaseFormatter{Decoder: echo.SignedCodec}
+	UnsignedFormatter = &echo.BaseFormatter{Decoder: echo.UnsignedCodec}
+	DecimalFormatter  = &echo.BaseFormatter{Decoder: echo.DecimalCodec}
 	DefaultFormatter  = TextFormatter
 )
 
@@ -403,7 +367,7 @@ func (w *Template) renderParams(ctx echo.Context, code string) (interface{}, err
 
 // Any value with formatter
 type Variant struct {
-	Formatter
+	echo.Formatter
 	Value interface{}
 }
 
