@@ -29,6 +29,8 @@ type DataSet interface {
 	PairEnumerator
 	Has(key string) bool
 	Length() int
+	Encode(ctx Context, value string) (string, bool)
+	Decode(ctx Context, value string) (string, bool)
 }
 
 // Map of DataSet by language code.
@@ -60,17 +62,32 @@ func (index index) Swap(i, j int) {
 }
 
 // DataSet implementation
-type dataset struct {
-	items map[string]string
-	index index
+type dataSet struct {
+	encoders map[string]string
+	decoders map[string]string
+	index    index
 }
 
-func (ds *dataset) Has(key string) bool {
-	_, has := ds.items[key]
+func (ds *dataSet) Encode(ctx Context, value string) (string, bool) {
+	if val, ok := ds.encoders[value]; ok {
+		return val, true
+	}
+	return "", false
+}
+
+func (ds *dataSet) Decode(ctx Context, value string) (string, bool) {
+	if val, ok := ds.decoders[value]; ok {
+		return val, true
+	}
+	return "", false
+}
+
+func (ds *dataSet) Has(key string) bool {
+	_, has := ds.decoders[key]
 	return has
 }
 
-func (ds *dataset) Enumerate(
+func (ds *dataSet) Enumerate(
 	ctx Context,
 	action PairConsumer,
 ) error {
@@ -86,7 +103,7 @@ func (ds *dataset) Enumerate(
 	return nil
 }
 
-func (ds *dataset) Length() int {
+func (ds *dataSet) Length() int {
 	return len(ds.index)
 }
 
@@ -95,9 +112,11 @@ func NewDataSet(
 	items map[string]string, // Map of items
 	sorted bool, // If you want sort items by alphabetically.
 ) DataSet {
+	encoders := make(map[string]string, len(items))
 	index := make(index, 0, len(items))
 
 	for key, val := range items {
+		encoders[val] = key
 		index = append(index, pair{key, val})
 	}
 
@@ -105,9 +124,10 @@ func NewDataSet(
 		sort.Sort(index)
 	}
 
-	return &dataset{
-		items: items,
-		index: index,
+	return &dataSet{
+		decoders: items,
+		encoders: encoders,
+		index:    index,
 	}
 }
 

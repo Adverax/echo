@@ -54,10 +54,6 @@ type PairEnumerator interface {
 
 type PairConsumer func(key string, value string) error
 
-/*func (fn PairEnumeratorFunc) Enumerate(ctx Context, action PairEnumeratorFunc) error {
-	return fn(ctx, action)
-}*/
-
 type ValidatorText interface {
 	Validate(ctx Context, value string) error
 }
