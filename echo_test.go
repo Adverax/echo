@@ -249,6 +249,13 @@ func TestEchoTrace(t *testing.T) {
 	testMethod(t, http.MethodTrace, "/", e)
 }
 
+func TestEchoForm(t *testing.T) {
+	e := New()
+	e.FORM("/", func(c Context) error {
+		return c.String(http.StatusOK, "Any")
+	})
+}
+
 func TestEchoAny(t *testing.T) { // JFC
 	e := New()
 	e.Any("/", func(c Context) error {

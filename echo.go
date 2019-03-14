@@ -420,6 +420,15 @@ func (e *Echo) TRACE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
 	return e.Add(http.MethodTrace, path, h, m...)
 }
 
+// FORM registers new GET AND POST routes for a path with matching handlers in the
+// router with options route-level middleware.
+func (g *Echo) FORM(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
+	return []*Route{
+		g.Add(http.MethodGet, path, handler, middleware...),
+		g.Add(http.MethodPost, path, handler, middleware...),
+	}
+}
+
 // Any registers a new route for all HTTP methods and path with matching handler
 // in the router with optional route-level middleware.
 func (e *Echo) Any(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {

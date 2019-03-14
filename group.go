@@ -18,13 +18,14 @@ type Mux interface {
 	POST(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
 	PUT(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
 	TRACE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route
-	Any(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route
-	Match(methods []string, path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route
+	FORM(path string, h HandlerFunc, m ...MiddlewareFunc) []*Route
+	Any(path string, h HandlerFunc, m ...MiddlewareFunc) []*Route
+	Match(methods []string, path string, h HandlerFunc, m ...MiddlewareFunc) []*Route
 	Static(prefix, root string) *Route
 	File(path, file string, m ...MiddlewareFunc) *Route
-	Add(method, path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route
+	Add(method, path string, h HandlerFunc, m ...MiddlewareFunc) *Route
 	Group(prefix string, m ...MiddlewareFunc) (g *Group)
-	Route(prefix string, fn func(g *Group), middleware ...MiddlewareFunc)
+	Route(prefix string, fn func(g *Group), m ...MiddlewareFunc)
 }
 
 type (
@@ -107,36 +108,44 @@ func (g *Group) TRACE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
 	return g.Add(http.MethodTrace, path, h, m...)
 }
 
+// FORM implements `Echo#Form()` for sub-routes within the Group.
+func (g *Group) FORM(path string, h HandlerFunc, m ...MiddlewareFunc) []*Route {
+	return []*Route{
+		g.Add(http.MethodGet, path, h, m...),
+		g.Add(http.MethodPost, path, h, m...),
+	}
+}
+
 // Any implements `Echo#Any()` for sub-routes within the Group.
-func (g *Group) Any(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
+func (g *Group) Any(path string, h HandlerFunc, m ...MiddlewareFunc) []*Route {
 	routes := make([]*Route, len(methods))
-	for i, m := range methods {
-		routes[i] = g.Add(m, path, handler, middleware...)
+	for i, method := range methods {
+		routes[i] = g.Add(method, path, h, m...)
 	}
 	return routes
 }
 
 // Match implements `Echo#Match()` for sub-routes within the Group.
-func (g *Group) Match(methods []string, path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
+func (g *Group) Match(methods []string, path string, h HandlerFunc, m ...MiddlewareFunc) []*Route {
 	routes := make([]*Route, len(methods))
-	for i, m := range methods {
-		routes[i] = g.Add(m, path, handler, middleware...)
+	for i, method := range methods {
+		routes[i] = g.Add(method, path, h, m...)
 	}
 	return routes
 }
 
 // Group creates a new sub-group with prefix and optional sub-group-level middleware.
-func (g *Group) Group(prefix string, middleware ...MiddlewareFunc) *Group {
-	m := make([]MiddlewareFunc, 0, len(g.middleware)+len(middleware))
-	m = append(m, g.middleware...)
-	m = append(m, middleware...)
-	return g.echo.Group(g.prefix+prefix, m...)
+func (g *Group) Group(prefix string, m ...MiddlewareFunc) *Group {
+	ms := make([]MiddlewareFunc, 0, len(g.middleware)+len(m))
+	ms = append(ms, g.middleware...)
+	ms = append(ms, m...)
+	return g.echo.Group(g.prefix+prefix, ms...)
 }
 
 // Group creates a new sub-group with prefix and optional sub-group-level middleware.
 // After that, routine calls custom function with this group.
-func (g *Group) Route(prefix string, fn func(g *Group), middleware ...MiddlewareFunc) {
-	fn(g.Group(prefix, middleware...))
+func (g *Group) Route(prefix string, fn func(g *Group), m ...MiddlewareFunc) {
+	fn(g.Group(prefix, m...))
 	return
 }
 
@@ -151,12 +160,12 @@ func (g *Group) File(path, file string, m ...MiddlewareFunc) *Route {
 }
 
 // Add implements `Echo#Add()` for sub-routes within the Group.
-func (g *Group) Add(method, path string, handler HandlerFunc, middleware ...MiddlewareFunc) *Route {
+func (g *Group) Add(method, path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
 	// Combine into a new slice to avoid accidentally passing the same slice for
 	// multiple routes, which would lead to later add() calls overwriting the
 	// middleware from earlier calls.
-	m := make([]MiddlewareFunc, 0, len(g.middleware)+len(middleware))
-	m = append(m, g.middleware...)
-	m = append(m, middleware...)
-	return g.echo.Add(method, g.prefix+path, handler, m...)
+	ms := make([]MiddlewareFunc, 0, len(g.middleware)+len(m))
+	ms = append(ms, g.middleware...)
+	ms = append(ms, m...)
+	return g.echo.Add(method, g.prefix+path, h, ms...)
 }
