@@ -48,6 +48,57 @@ type Provider interface {
 	Next(ctx context.Context) error
 }
 
+// ArrayProvider is base for CustomArrayProvider
+type ArrayProvider struct {
+	Quantity int // Items count
+	Index    int // Current index (starts from 1)
+	Loader   func(ctx context.Context) (int, error)
+	loaded   bool
+}
+
+func (provider *ArrayProvider) Count(ctx context.Context) (int, error) {
+	err := provider.Import(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return provider.Quantity, nil
+}
+
+func (provider *ArrayProvider) Total(ctx context.Context) (int, error) {
+	err := provider.Import(ctx, nil)
+	if err != nil {
+		return 0, err
+	}
+
+	return provider.Quantity, nil
+}
+
+func (provider *ArrayProvider) Import(ctx context.Context, pagination *Pagination) error {
+	if provider.loaded || provider.Loader == nil {
+		return nil
+	}
+
+	quantity, err := provider.Loader(ctx)
+	if err != nil {
+		return err
+	}
+	provider.Quantity = quantity
+	provider.loaded = true
+
+	return nil
+}
+
+func (provider *ArrayProvider) Next(ctx context.Context) error {
+	index := provider.Index + 1
+	if index > provider.Quantity {
+		return errors.New("range check error")
+	}
+
+	provider.Index = index
+	return nil
+}
+
 var (
 	ErrNoMatch = errors.New("no match")
 )
