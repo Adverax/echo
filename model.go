@@ -174,48 +174,45 @@ func (model Model) BindFrom(
 				}
 			}
 		}
-		for _, validator := range validators {
-			err := validator()
-			if err != nil {
-				return err
-			}
+	} else {
+		// Use record assignment
+		record := reflect.ValueOf(rec)
+		if record.Type().Kind() == reflect.Ptr {
+			record = record.Elem()
 		}
-		return nil
-	}
 
-	// Use record assignment
-	record := reflect.ValueOf(rec)
-	if record.Type().Kind() == reflect.Ptr {
-		record = record.Elem()
-	}
+		for _, item := range model {
+			if field, ok := item.(ModelField); ok {
+				f := record.FieldByName(field.GetName())
+				if f.Kind() == reflect.Invalid {
+					continue
+				}
 
-	for _, item := range model {
-		if field, ok := item.(ModelField); ok {
-			f := record.FieldByName(field.GetName())
-			if f.Kind() == reflect.Invalid {
-				continue
-			}
+				if f.CanInterface() {
+					field.SetVal(ctx, f.Interface())
+				}
 
-			if f.CanInterface() {
-				field.SetVal(ctx, f.Interface())
-			}
+				if f.CanSet() {
+					value, ok := data[field.GetName()]
+					if ok && len(value) != 0 {
+						err := field.SetValue(ctx, value[0])
+						if err != nil {
+							return err
+						}
 
-			if f.CanSet() {
-				value, ok := data[field.GetName()]
-				if ok && len(value) != 0 {
-					err := field.SetValue(ctx, value[0])
-					if err != nil {
-						return err
+						dst := f.Addr().Interface()
+						_ = generic.ConvertAssign(dst, field.GetVal())
 					}
-
-					dst := f.Addr().Interface()
-					_ = generic.ConvertAssign(dst, field.GetVal())
 				}
 			}
 		}
 	}
 
+	// Apply custom validators
 	for _, validator := range validators {
+		if validator == nil {
+			continue
+		}
 		err := validator()
 		if err != nil {
 			return err
