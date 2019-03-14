@@ -21,6 +21,7 @@ import (
 	stdContext "context"
 	"encoding/gob"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"time"
@@ -299,6 +300,10 @@ type UrlLinker interface {
 	Expand(ctx Context, url string) string
 	// Collapse url by removing current shard
 	Collapse(ctx Context, url string) string
+}
+
+type Template interface {
+	Execute(wr io.Writer, data interface{}) error
 }
 
 var (
