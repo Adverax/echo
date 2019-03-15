@@ -19,6 +19,7 @@ package echo
 
 import (
 	"github.com/adverax/echo/data"
+	"github.com/adverax/echo/generic"
 	"sort"
 	"strconv"
 	"strings"
@@ -28,10 +29,9 @@ import (
 // Worked with literal representation keys and values.
 type DataSet interface {
 	PairEnumerator
+	Codec
 	Has(key string) bool
 	Length() int
-	Encode(value string) (string, bool)
-	Decode(value string) (string, bool)
 }
 
 // Map of DataSet by language code.
@@ -77,18 +77,22 @@ type dataSet struct {
 	index    index
 }
 
-func (ds *dataSet) Encode(value string) (string, bool) {
+func (ds *dataSet) Encode(ctx Context, value string) (interface{}, error) {
 	if val, ok := ds.encoders[value]; ok {
-		return val, true
+		return val, nil
 	}
-	return "", false
+	return "", data.ErrNoMatch
 }
 
-func (ds *dataSet) Decode(value string) (string, bool) {
-	if val, ok := ds.decoders[value]; ok {
-		return val, true
+func (ds *dataSet) Decode(ctx Context, value interface{}) (string, error) {
+	val, ok := generic.ConvertToString(value)
+	if !ok {
+		return "", data.ErrNoMatch
 	}
-	return "", false
+	if v, ok := ds.decoders[val]; ok {
+		return v, nil
+	}
+	return "", data.ErrNoMatch
 }
 
 func (ds *dataSet) Has(key string) bool {

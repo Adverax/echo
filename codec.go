@@ -66,6 +66,7 @@ func (f ValidatorFuncText) Validate(ctx Context, value string) error {
 
 type Text struct {
 	Validator ValidatorText
+	Optional  bool
 }
 
 func (codec *Text) Encode(ctx Context, value string) (interface{}, error) {
@@ -82,6 +83,10 @@ func (codec *Text) Encode(ctx Context, value string) (interface{}, error) {
 func (codec *Text) Decode(ctx Context, value interface{}) (string, error) {
 	val, _ := generic.ConvertToString(value)
 	return val, nil
+}
+
+func (codec *Text) Format(ctx Context, value interface{}) (val interface{}, err error) {
+	return formatDefault(ctx, codec, value, codec.Optional)
 }
 
 func (codec *Text) IsEmpty(value interface{}) bool {
@@ -103,6 +108,7 @@ type Signed struct {
 	Min       int64
 	Max       int64
 	Validator ValidatorSigned
+	Optional  bool
 }
 
 func (codec *Signed) Encode(ctx Context, value string) (interface{}, error) {
@@ -158,6 +164,10 @@ func (codec *Signed) Decode(ctx Context, value interface{}) (string, error) {
 	return strconv.FormatInt(int64(val), 10), nil
 }
 
+func (codec *Signed) Format(ctx Context, value interface{}) (val interface{}, err error) {
+	return formatDefault(ctx, codec, value, codec.Optional)
+}
+
 func (codec *Signed) IsEmpty(value interface{}) bool {
 	val, _ := generic.ConvertToInt64(value)
 	return val == 0
@@ -177,6 +187,7 @@ type Unsigned struct {
 	Min       uint64
 	Max       uint64
 	Validator ValidatorUnsigned
+	Optional  bool
 }
 
 func (codec *Unsigned) Encode(ctx Context, value string) (interface{}, error) {
@@ -232,6 +243,10 @@ func (codec *Unsigned) Decode(ctx Context, value interface{}) (string, error) {
 	return strconv.FormatUint(uint64(val), 10), nil
 }
 
+func (codec *Unsigned) Format(ctx Context, value interface{}) (val interface{}, err error) {
+	return formatDefault(ctx, codec, value, codec.Optional)
+}
+
 func (codec *Unsigned) IsEmpty(value interface{}) bool {
 	val, _ := generic.ConvertToUint64(value)
 	return val == 0
@@ -251,6 +266,7 @@ type Decimal struct {
 	Min       float64
 	Max       float64
 	Validator ValidatorDecimal
+	Optional  bool
 }
 
 func (codec *Decimal) Encode(ctx Context, value string) (interface{}, error) {
@@ -306,6 +322,10 @@ func (codec *Decimal) Decode(ctx Context, value interface{}) (string, error) {
 	return fmt.Sprintf("%g", val), nil
 }
 
+func (codec *Decimal) Format(ctx Context, value interface{}) (val interface{}, err error) {
+	return formatDefault(ctx, codec, value, codec.Optional)
+}
+
 func (codec *Decimal) IsEmpty(value interface{}) bool {
 	val, _ := generic.ConvertToFloat64(value)
 	return val == 0
@@ -319,7 +339,7 @@ type Formatter interface {
 // Formatter, that based on codec.Decode method
 type BaseFormatter struct {
 	Decoder
-	ShowEmpty bool
+	Optional bool
 }
 
 func (w *BaseFormatter) Format(
@@ -331,20 +351,7 @@ func (w *BaseFormatter) Format(
 		c = TextCodec
 	}
 
-	if !w.ShowEmpty {
-		if cc, ok := c.(Empty); ok {
-			if cc.IsEmpty(value) {
-				return "", nil
-			}
-		}
-	}
-
-	val, err := c.Decode(ctx, value)
-	if err != nil {
-		return "", err
-	}
-
-	return val, nil
+	return formatDefault(ctx, w.Decoder, value, w.Optional)
 }
 
 // Abstract value converter
@@ -384,9 +391,35 @@ func NewPairConverter(codec PairCodec) PairConverter {
 }
 
 var (
-	TextCodec     Codec = &Text{}
-	SignedCodec   Codec = &Signed{}
-	UnsignedCodec Codec = &Unsigned{}
-	DecimalCodec  Codec = &Decimal{}
-	BoolCodec     Codec = &Unsigned{} // Override in real application
+	TextCodec     = new(Text)
+	SignedCodec   = new(Signed)
+	UnsignedCodec = new(Unsigned)
+	DecimalCodec  = new(Decimal)
+	BoolCodec     = new(Unsigned) // Override in real application
 )
+
+func formatDefault(
+	ctx Context,
+	decoder Decoder,
+	value interface{},
+	optional bool,
+) (interface{}, error) {
+	if decoder == nil {
+		decoder = TextCodec
+	}
+
+	if optional {
+		if cc, ok := decoder.(Empty); ok {
+			if cc.IsEmpty(value) {
+				return "", nil
+			}
+		}
+	}
+
+	val, err := decoder.Decode(ctx, value)
+	if err != nil {
+		return "", err
+	}
+
+	return val, nil
+}
