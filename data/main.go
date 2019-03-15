@@ -100,5 +100,6 @@ func (provider *ArrayProvider) Next(ctx context.Context) error {
 }
 
 var (
-	ErrNoMatch = errors.New("no match")
+	ErrNoMatch         = errors.New("no match")
+	ErrRangeCheckError = errors.New("range check error")
 )

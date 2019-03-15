@@ -18,6 +18,7 @@
 package echo
 
 import (
+	"github.com/adverax/echo/data"
 	"sort"
 	"strconv"
 	"strings"
@@ -35,6 +36,14 @@ type DataSet interface {
 
 // Map of DataSet by language code.
 type DataSets map[uint16]DataSet // DataSet by language
+
+func (datasets DataSets) DataSet(ctx Context) (DataSet, error) {
+	lang := ctx.Locale().Language()
+	if ds, ok := datasets[lang]; ok {
+		return ds, nil
+	}
+	return nil, data.ErrNoMatch
+}
 
 // DataSet provider
 type DataSetProvider interface {
