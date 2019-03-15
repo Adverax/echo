@@ -20,6 +20,7 @@ package echo
 import (
 	stdContext "context"
 	"fmt"
+	"github.com/adverax/echo/data"
 	"net/http"
 	"net/url"
 	"time"
@@ -54,13 +55,13 @@ func (messages DefaultResourceManager) Fetch(
 	return "", nil
 }
 
-type DefaultDataSetManager map[uint32]DataSet
+type DefaultDataSetFamily map[uint32]DataSet
 
-func (datasets DefaultDataSetManager) Fetch(
+func (family DefaultDataSetFamily) Fetch(
 	ctx stdContext.Context,
 	id uint32,
 ) (DataSet, error) {
-	if ds, ok := datasets[id]; ok {
+	if ds, ok := family[id]; ok {
 		return ds, nil
 	}
 
@@ -90,14 +91,21 @@ func (manager *DefaultSessionManager) Load(
 	return nil, fmt.Errorf("abstact method for session, loading")
 }
 
+type DefaultDataSetManager struct{}
+
+func (manager *DefaultDataSetManager) FindAll(ctx stdContext.Context, doc uint32) (DataSets, error) {
+	return nil, data.ErrNoMatch
+}
+
 var (
-	DefaultMessages  = &DefaultMessageManager{}
-	DefaultResources = &DefaultResourceManager{}
-	DefaultDataSets  = &DefaultDataSetManager{}
-	DefaultLinker    = &DefaultUrlLinker{}
-	DefaultCache     = memory.New(memory.Options{})
-	DefaultSessions  = &DefaultSessionManager{}
-	DefaultLocale    = &BaseLocale{
+	DefaultMessages      = &DefaultMessageManager{}
+	DefaultResources     = &DefaultResourceManager{}
+	DefaultDataSets      = &DefaultDataSetFamily{}
+	DefaultLinker        = &DefaultUrlLinker{}
+	DefaultCache         = memory.New(memory.Options{})
+	DefaultSessions      = &DefaultSessionManager{}
+	DefaultDatSetManager = &DefaultDataSetManager{}
+	DefaultLocale        = &BaseLocale{
 		DateFormat:     generic.DateFormat,
 		TimeFormat:     generic.TimeFormat,
 		DateTimeFormat: generic.DateTimeFormat,

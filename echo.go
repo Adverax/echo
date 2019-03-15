@@ -83,6 +83,7 @@ type (
 		Cache            cache.Cache
 		Sessions         SessionManager
 		Context          stdContext.Context
+		DataSets         DataSetManager
 	}
 
 	// Route contains a handler and information for matching against requests.
@@ -285,6 +286,7 @@ func New() (e *Echo) {
 		Sessions:  DefaultSessions,
 		Context:   stdContext.Background(),
 		Logger:    log.NewDebug("\n"),
+		DataSets:  DefaultDatSetManager,
 		AutoTLSManager: autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		},
@@ -422,10 +424,10 @@ func (e *Echo) TRACE(path string, h HandlerFunc, m ...MiddlewareFunc) *Route {
 
 // FORM registers new GET AND POST routes for a path with matching handlers in the
 // router with options route-level middleware.
-func (g *Echo) FORM(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
+func (e *Echo) FORM(path string, handler HandlerFunc, middleware ...MiddlewareFunc) []*Route {
 	return []*Route{
-		g.Add(http.MethodGet, path, handler, middleware...),
-		g.Add(http.MethodPost, path, handler, middleware...),
+		e.Add(http.MethodGet, path, handler, middleware...),
+		e.Add(http.MethodPost, path, handler, middleware...),
 	}
 }
 

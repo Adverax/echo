@@ -629,7 +629,11 @@ func (w *FormSelector) SetValue(
 	}
 
 	if w.FormField.validateRequired(value, w.Required) {
-		if !w.Items.Has(w.value) {
+		has, err := w.Items.Has(ctx, w.value)
+		if err != nil {
+			return err
+		}
+		if !has {
 			w.AddError(echo.ValidationErrorInvalidValue)
 		}
 	}
@@ -641,8 +645,16 @@ func (w *FormSelector) renderItems(
 	ctx echo.Context,
 	selected string,
 ) ([]interface{}, error) {
-	rows := make([]interface{}, 0, w.Items.Length())
-	err := w.Items.Enumerate(
+	items, err := w.Items.DataSet(ctx)
+	if err != nil {
+		return nil, err
+	}
+	length, err := items.Length(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]interface{}, 0, length)
+	err = items.Enumerate(
 		ctx,
 		func(key, value string) error {
 			row := make(map[string]interface{}, 4)
@@ -746,8 +758,16 @@ func (w *FormSubmit) Render(
 	}
 
 	// Complex version
-	res := make(map[string]interface{}, w.Items.Length())
-	err := w.Items.Enumerate(
+	items, err := w.Items.DataSet(ctx)
+	if err != nil {
+		return nil, err
+	}
+	length, err := w.Items.Length(ctx)
+	if err != nil {
+		return nil, err
+	}
+	res := make(map[string]interface{}, length)
+	err = items.Enumerate(
 		ctx,
 		func(key, value string) error {
 			btn, err := w.FormField.render(ctx)
@@ -787,7 +807,11 @@ func (w *FormSubmit) SetValue(
 
 	if w.FormField.validateRequired(value, w.Required) {
 		if w.Items != nil {
-			if !w.Items.Has(w.value) {
+			has, err := w.Items.Has(ctx, w.value)
+			if err != nil {
+				return err
+			}
+			if !has {
 				w.AddError(echo.ValidationErrorInvalidValue)
 			}
 		} else if w.val != keeper {

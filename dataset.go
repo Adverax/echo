@@ -27,17 +27,16 @@ import (
 )
 
 type DataSetManager interface {
-	Find(ctx stdContext.Context, doc uint32, language uint16) (DataSet, error)
+	//Find(ctx stdContext.Context, doc uint32, language uint16) (DataSet, error)
 	FindAll(ctx stdContext.Context, doc uint32) (DataSets, error)
 }
 
 // Abstract data set
 // Worked with literal representation keys and values.
 type DataSet interface {
-	PairEnumerator
-	Codec
-	Has(key string) bool
-	Length() int
+	PairCodec
+	Has(ctx Context, key string) (bool, error)
+	Length(ctx Context) (int, error)
 }
 
 // Map of DataSet by language code.
@@ -48,7 +47,53 @@ func (datasets DataSets) DataSet(ctx Context) (DataSet, error) {
 	if ds, ok := datasets[lang]; ok {
 		return ds, nil
 	}
+
 	return nil, data.ErrNoMatch
+}
+
+func (datasets DataSets) Enumerate(ctx Context, action PairConsumer) error {
+	ds, err := datasets.DataSet(ctx)
+	if err != nil {
+		return err
+	}
+
+	return ds.Enumerate(ctx, action)
+}
+
+func (datasets DataSets) Decode(ctx Context, value interface{}) (string, error) {
+	ds, err := datasets.DataSet(ctx)
+	if err != nil {
+		return "", err
+	}
+
+	return ds.Decode(ctx, value)
+}
+
+func (datasets DataSets) Encode(ctx Context, value string) (interface{}, error) {
+	ds, err := datasets.DataSet(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return ds.Encode(ctx, value)
+}
+
+func (datasets DataSets) Has(ctx Context, key string) (bool, error) {
+	ds, err := datasets.DataSet(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return ds.Has(ctx, key)
+}
+
+func (datasets DataSets) Length(ctx Context) (int, error) {
+	ds, err := datasets.DataSet(ctx)
+	if err != nil {
+		return 0, err
+	}
+
+	return ds.Length(ctx)
 }
 
 // DataSet provider
@@ -101,9 +146,9 @@ func (ds *dataSet) Decode(ctx Context, value interface{}) (string, error) {
 	return "", data.ErrNoMatch
 }
 
-func (ds *dataSet) Has(key string) bool {
+func (ds *dataSet) Has(ctx Context, key string) (bool, error) {
 	_, has := ds.decoders[key]
-	return has
+	return has, nil
 }
 
 func (ds *dataSet) Enumerate(
@@ -122,8 +167,12 @@ func (ds *dataSet) Enumerate(
 	return nil
 }
 
-func (ds *dataSet) Length() int {
-	return len(ds.index)
+func (ds *dataSet) Length(ctx Context) (int, error) {
+	return len(ds.index), nil
+}
+
+func (ds *dataSet) DataSet(ctx Context) (DataSet, error) {
+	return ds, nil
 }
 
 // Create new DataSet from map
@@ -131,6 +180,10 @@ func NewDataSet(
 	items map[string]string, // Map of items
 	sorted bool, // If you want sort items by alphabetically.
 ) DataSet {
+	if items == nil {
+		items = make(map[string]string)
+	}
+
 	encoders := make(map[string]string, len(items))
 	index := make(index, 0, len(items))
 

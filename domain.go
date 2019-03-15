@@ -108,17 +108,17 @@ type Locale interface {
 	DataSet(ctx stdContext.Context, id uint32) (DataSet, error)
 }
 
-// MessageFamily for selected language
+// MessageFamily for active language
 type MessageFamily interface {
 	Fetch(ctx stdContext.Context, id uint32) (string, error)
 }
 
-// ResourceFamily for selected language
+// ResourceFamily for active language
 type ResourceFamily interface {
 	Fetch(ctx stdContext.Context, id uint32) (string, error)
 }
 
-// DataSetFamily for selected language
+// DataSetFamily for active language
 type DataSetFamily interface {
 	Fetch(ctx stdContext.Context, id uint32) (DataSet, error)
 }

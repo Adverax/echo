@@ -50,8 +50,13 @@ func TestNewDataSet(t *testing.T) {
 	assert.Equal(t, "abc", keys)
 	assert.Equal(t, "123", values)
 
-	assert.True(t, ds.Has("a"))
-	assert.False(t, ds.Has("e"))
+	has, err := ds.Has(ctx, "a")
+	assert.NoError(t, err)
+	assert.True(t, has)
+
+	has, err = ds.Has(ctx, "e")
+	assert.NoError(t, err)
+	assert.False(t, has)
 }
 
 func TestParseDataSet(t *testing.T) {
@@ -63,16 +68,17 @@ func TestParseDataSet(t *testing.T) {
 `,
 	)
 
+	e := New()
+	ctx := e.NewContext(nil, nil)
 	check := func(key, value string) {
-		assert.True(t, ds.Has(key))
+		has, err := ds.Has(ctx, key)
+		assert.NoError(t, err)
+		assert.True(t, has)
 	}
 
 	check("1", "London")
 	check("2", "New York")
 	check("3", "Paris")
-
-	e := New()
-	ctx := e.NewContext(nil, nil)
 
 	v1, err := ds.Decode(ctx, "1")
 	assert.NoError(t, err)
