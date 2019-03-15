@@ -18,12 +18,18 @@
 package echo
 
 import (
+	stdContext "context"
 	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"sort"
 	"strconv"
 	"strings"
 )
+
+type DataSetManager interface {
+	Find(ctx stdContext.Context, doc uint32, language uint16) (DataSet, error)
+	FindAll(ctx stdContext.Context, doc uint32) (DataSets, error)
+}
 
 // Abstract data set
 // Worked with literal representation keys and values.

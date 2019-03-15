@@ -304,6 +304,15 @@ type Template interface {
 	Execute(wr io.Writer, data interface{}) error
 }
 
+type Designer interface {
+	// Parse templates (with relative paths)
+	ParseFiles(files ...string) Template
+	// Create new child designer
+	Append(path string, frames ...string) Designer
+	// Get application
+	Echo() *Echo
+}
+
 var (
 	MessageInvalidValue   uint32 = 1
 	MessageRequiredValue  uint32 = 2

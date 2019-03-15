@@ -141,6 +141,20 @@ func TestRenderWidget(t *testing.T) {
 			},
 			dst: `"123"`,
 		},
+		"Map": {
+			src: Map{
+				"First":  "first",
+				"Second": "second",
+			},
+			dst: `{"First":"first","Second":"second"}`,
+		},
+		"List": {
+			src: List{
+				"first",
+				"second",
+			},
+			dst: `["first","second"]`,
+		},
 
 		// Action
 		"Action: simple": {
