@@ -32,11 +32,11 @@ type DataSetManager interface {
 }
 
 // Abstract data set
-// Worked with literal representation keys and values.
+// Works with literal representation keys and values.
 type DataSet interface {
-	PairCodec
-	Has(ctx Context, key string) (bool, error)
-	Length(ctx Context) (int, error)
+	Codec
+	PairEnumerator
+	DataSetProvider
 }
 
 // Map of DataSet by language code.
@@ -76,15 +76,6 @@ func (datasets DataSets) Encode(ctx Context, value string) (interface{}, error) 
 	}
 
 	return ds.Encode(ctx, value)
-}
-
-func (datasets DataSets) Has(ctx Context, key string) (bool, error) {
-	ds, err := datasets.DataSet(ctx)
-	if err != nil {
-		return false, err
-	}
-
-	return ds.Has(ctx, key)
 }
 
 func (datasets DataSets) Length(ctx Context) (int, error) {
@@ -144,11 +135,6 @@ func (ds *dataSet) Decode(ctx Context, value interface{}) (string, error) {
 		return v, nil
 	}
 	return "", data.ErrNoMatch
-}
-
-func (ds *dataSet) Has(ctx Context, key string) (bool, error) {
-	_, has := ds.decoders[key]
-	return has, nil
 }
 
 func (ds *dataSet) Enumerate(
@@ -352,4 +338,11 @@ func parseDataSetMap(
 	}
 
 	return NewDataSet(enum, sorted)
+}
+
+func IsPrimitiveDataSet(
+	dataset DataSet,
+) bool {
+	_, ok := dataset.(*dataSet)
+	return ok
 }

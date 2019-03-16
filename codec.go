@@ -40,15 +40,11 @@ type Codec interface {
 	Decoder
 }
 
-// Advanced codec with items enumeration.
-type PairCodec interface {
-	Codec
-	PairEnumerator
-	DataSetProvider
-}
-
 // Pair enumerator
 type PairEnumerator interface {
+	// Get items count
+	Length(ctx Context) (int, error)
+	// Enumerate all items
 	Enumerate(ctx Context, action PairConsumer) error
 }
 
@@ -373,20 +369,24 @@ func NewConverter(codec Codec) Converter {
 }
 
 // Abstract pair converter
+type pairs = DataSet
+
 type PairConverter interface {
-	PairCodec
+	pairs
 	Formatter
 }
 
 type pairConverter struct {
-	PairCodec
+	pairs
 	Formatter
 }
 
-func NewPairConverter(codec PairCodec) PairConverter {
+func NewPairConverter(codec DataSet) PairConverter {
 	return &pairConverter{
-		PairCodec: codec,
-		Formatter: &BaseFormatter{Decoder: codec},
+		pairs: codec,
+		Formatter: &BaseFormatter{
+			Decoder: codec,
+		},
 	}
 }
 

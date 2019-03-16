@@ -19,6 +19,7 @@ package widget
 
 import (
 	"github.com/adverax/echo"
+	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"io"
 	"os"
@@ -629,11 +630,11 @@ func (w *FormSelector) SetValue(
 	}
 
 	if w.FormField.validateRequired(value, w.Required) {
-		has, err := w.Items.Has(ctx, w.value)
+		_, err := w.Items.Decode(ctx, w.value)
 		if err != nil {
-			return err
-		}
-		if !has {
+			if err != data.ErrNoMatch {
+				return err
+			}
 			w.AddError(echo.ValidationErrorInvalidValue)
 		}
 	}
@@ -807,11 +808,11 @@ func (w *FormSubmit) SetValue(
 
 	if w.FormField.validateRequired(value, w.Required) {
 		if w.Items != nil {
-			has, err := w.Items.Has(ctx, w.value)
+			_, err := w.Items.Decode(ctx, w.value)
 			if err != nil {
-				return err
-			}
-			if !has {
+				if err != data.ErrNoMatch {
+					return err
+				}
 				w.AddError(echo.ValidationErrorInvalidValue)
 			}
 		} else if w.val != keeper {
