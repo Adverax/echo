@@ -210,24 +210,29 @@ func (field *FormField) SetValue(ctx echo.Context, value string) error {
 	val, err := field.Codec.Encode(ctx, value)
 	if err == nil {
 		field.val = val
-	} else {
-		switch e := err.(type) {
-		case echo.ValidationError:
-			field.AddError(e)
-		case echo.ValidationErrors:
-			if len(e) == 0 {
-				field.val = val
-			} else {
-				for _, ee := range e {
-					field.AddError(ee)
-				}
-			}
-		default:
-			return err
-		}
+		return nil
 	}
 
-	return err
+	switch e := err.(type) {
+	case echo.ValidationError:
+		field.AddError(e)
+	case echo.ValidationErrors:
+		if len(e) == 0 {
+			field.val = val
+		} else {
+			for _, ee := range e {
+				field.AddError(ee)
+			}
+		}
+	default:
+		if err != data.ErrNoMatch {
+			return err
+		}
+
+		field.AddError(echo.ValidationErrorInvalidValue)
+	}
+
+	return nil
 }
 
 // Get disabled flag

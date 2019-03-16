@@ -40,16 +40,6 @@ type Codec interface {
 	Decoder
 }
 
-// Pair enumerator
-type PairEnumerator interface {
-	// Get items count
-	Length(ctx Context) (int, error)
-	// Enumerate all items
-	Enumerate(ctx Context, action PairConsumer) error
-}
-
-type PairConsumer func(key string, value string) error
-
 type ValidatorText interface {
 	Validate(ctx Context, value string) error
 }

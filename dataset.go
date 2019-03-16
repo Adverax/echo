@@ -31,11 +31,21 @@ type DataSetManager interface {
 	FindAll(ctx stdContext.Context, doc uint32) (DataSets, error)
 }
 
+type DataSetConsumer func(key string, value string) error
+
+// DataSet enumerator
+type DataSetEnumerator interface {
+	// Get items count
+	Length(ctx Context) (int, error)
+	// Enumerate all items
+	Enumerate(ctx Context, consumer DataSetConsumer) error
+}
+
 // Abstract data set
 // Works with literal representation keys and values.
 type DataSet interface {
 	Codec
-	PairEnumerator
+	DataSetEnumerator
 	DataSetProvider
 }
 
@@ -51,7 +61,7 @@ func (datasets DataSets) DataSet(ctx Context) (DataSet, error) {
 	return nil, data.ErrNoMatch
 }
 
-func (datasets DataSets) Enumerate(ctx Context, action PairConsumer) error {
+func (datasets DataSets) Enumerate(ctx Context, action DataSetConsumer) error {
 	ds, err := datasets.DataSet(ctx)
 	if err != nil {
 		return err
@@ -139,7 +149,7 @@ func (ds *dataSet) Decode(ctx Context, value interface{}) (string, error) {
 
 func (ds *dataSet) Enumerate(
 	ctx Context,
-	action PairConsumer,
+	action DataSetConsumer,
 ) error {
 	for _, pair := range ds.index {
 		if pair.val != "" {
