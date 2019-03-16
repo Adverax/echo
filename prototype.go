@@ -19,9 +19,7 @@ package echo
 
 import (
 	stdContext "context"
-	"fmt"
 	"github.com/adverax/echo/data"
-	"net/http"
 	"net/url"
 	"time"
 
@@ -82,15 +80,6 @@ func (linker *DefaultUrlLinker) Collapse(ctx Context, url string) string {
 	return url
 }
 
-type DefaultSessionManager struct{}
-
-func (manager *DefaultSessionManager) Load(
-	ctc stdContext.Context,
-	request *http.Request,
-) (Session, error) {
-	return nil, fmt.Errorf("abstact method for session, loading")
-}
-
 type DefaultDataSetManager struct{}
 
 func (manager *DefaultDataSetManager) FindAll(ctx stdContext.Context, doc uint32) (DataSets, error) {
@@ -103,7 +92,6 @@ var (
 	DefaultDataSets      = &DefaultDataSetFamily{}
 	DefaultLinker        = &DefaultUrlLinker{}
 	DefaultCache         = memory.New(memory.Options{})
-	DefaultSessions      = &DefaultSessionManager{}
 	DefaultDatSetManager = &DefaultDataSetManager{}
 	DefaultLocale        = &BaseLocale{
 		DateFormat:     generic.DateFormat,

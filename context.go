@@ -195,7 +195,10 @@ type Context interface {
 	Logger() log.Logger
 
 	// Session returns the `Session` instance.
-	Session() (Session, error)
+	Session() Session
+
+	// SetSession sets the `Session` instance.
+	SetSession(session Session)
 
 	// Echo returns the `Echo` instance.
 	Echo() *Echo
@@ -660,16 +663,12 @@ func (c *context) Logger() log.Logger {
 	return c.echo.Logger
 }
 
-func (c *context) Session() (Session, error) {
-	if c.session == nil {
-		session, err := c.echo.Sessions.Load(c, c.request)
-		if err != nil {
-			return nil, err
-		}
-		c.session = session
-	}
+func (c *context) Session() Session {
+	return c.session
+}
 
-	return c.session, nil
+func (c *context) SetSession(session Session) {
+	c.session = session
 }
 
 func (c *context) Reset(r *http.Request, w http.ResponseWriter) {

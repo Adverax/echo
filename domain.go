@@ -22,7 +22,6 @@ import (
 	"encoding/gob"
 	"fmt"
 	"io"
-	"net/http"
 	"net/url"
 	"time"
 )
@@ -65,16 +64,11 @@ type Session interface {
 	// Clear deletes all values in the session.
 	Clear()
 	// AddFlash adds a flash message to the session.
-	AddFlash(flash Flash)
+	AddFlash(class FlashClass, message interface{})
 	// Flashes returns a slice of flash messages from the session.
 	Flashes() []interface{}
 	// Save saves all sessions used during the current request.
 	Save() error
-}
-
-// Session manager
-type SessionManager interface {
-	Load(ctx stdContext.Context, request *http.Request) (Session, error)
 }
 
 // Locale represents localization strategy.
