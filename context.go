@@ -182,6 +182,9 @@ type Context interface {
 	// Revert redirects the request to a prev (referrer URL) address with status code.
 	Revert(code int) error
 
+	// HeaderNoCache writes the header for disable any caching
+	HeaderNoCache()
+
 	// Error invokes the registered HTTP error handler. Generally used by middleware.
 	Error(err error)
 
@@ -641,6 +644,10 @@ func (c *context) Refresh(code int) error {
 
 func (c *context) Revert(code int) error {
 	return c.Redirect(code, c.request.Referer())
+}
+
+func (c *context) HeaderNoCache() {
+	c.response.Writer.Header().Set("Cache-Control", "no-cache")
 }
 
 func (c *context) Error(err error) {

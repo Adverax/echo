@@ -260,3 +260,8 @@ func (models Models) IsValid() bool {
 	}
 	return false
 }
+
+// Create name of field of band
+func MakeMultiModelName(key, name string) string {
+	return fmt.Sprintf("[%s].%s", key, name)
+}

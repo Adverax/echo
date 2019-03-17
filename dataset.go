@@ -26,6 +26,8 @@ import (
 	"strings"
 )
 
+type DATASET uint32
+
 type DataSetManager interface {
 	//Find(ctx stdContext.Context, doc uint32, language uint16) (DataSet, error)
 	FindAll(ctx stdContext.Context, doc uint32) (DataSets, error)
