@@ -27,7 +27,7 @@ type Cache interface {
 	// Set value with key and expire time.
 	Set(key string, val interface{}, timeout time.Duration) error
 	// Check if value exists or not.
-	IsExist(key string) (bool, error)
+	IsExists(key string) (bool, error)
 	// Delete cached value by key.
 	Delete(key string) error
 	// Increase cached int value by key, as a counter.

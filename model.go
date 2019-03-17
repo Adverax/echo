@@ -161,9 +161,15 @@ func (model Model) BindFrom(
 		// Skip record assignment
 		for _, item := range model {
 			if field, ok := item.(ModelField); ok {
+				err := field.Reset(ctx)
+				if err != nil {
+					return err
+				}
+
 				if field.GetDisabled() || field.GetHidden() {
 					continue
 				}
+
 				name := field.GetName()
 				value, ok := data[name]
 				if ok && len(value) != 0 {
@@ -183,6 +189,11 @@ func (model Model) BindFrom(
 
 		for _, item := range model {
 			if field, ok := item.(ModelField); ok {
+				err := field.Reset(ctx)
+				if err != nil {
+					return err
+				}
+
 				f := record.FieldByName(field.GetName())
 				if f.Kind() == reflect.Invalid {
 					continue

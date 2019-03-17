@@ -53,7 +53,7 @@ type Storage interface {
 	// Set value with key and expire time.
 	Set(key string, val interface{}, timeout time.Duration) error
 	// Check if value exists or not.
-	IsExist(key string) (bool, error)
+	IsExists(key string) (bool, error)
 	// Delete cached value by key.
 	Delete(key string) error
 }
@@ -66,7 +66,7 @@ type Session interface {
 	// AddFlash adds a flash message to the session.
 	AddFlash(class FlashClass, message interface{})
 	// Flashes returns a slice of flash messages from the session.
-	Flashes() []interface{}
+	Flashes() []*Flash
 	// Save saves all sessions used during the current request.
 	Save() error
 }

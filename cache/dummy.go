@@ -33,7 +33,7 @@ func (cache *DummyCache) Set(key string, val interface{}, timeout time.Duration)
 	return nil
 }
 
-func (cache *DummyCache) IsExist(key string) (bool, error) {
+func (cache *DummyCache) IsExists(key string) (bool, error) {
 	return false, nil
 }
 

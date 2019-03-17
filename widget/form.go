@@ -142,6 +142,7 @@ type FormField struct {
 	Hidden   bool                  // Field is hidden (not rendered)
 	Filter   FormFieldFilterFunc   // Custom filter
 	Codec    echo.Codec            // Field codec (optional)
+	Default  interface{}           // Default value
 	val      interface{}           // Internal representation of value
 	value    string                // External representation of value
 	errors   echo.ValidationErrors // Field errors
@@ -265,6 +266,7 @@ func (field *FormField) Reset(ctx echo.Context) error {
 	field.errors = nil
 	field.value = ""
 	field.val = nil
+	field.SetVal(ctx, field.Default)
 	return nil
 }
 

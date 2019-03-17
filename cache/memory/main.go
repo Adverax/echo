@@ -137,7 +137,7 @@ func (c *Cache) Delete(key string) error {
 }
 
 // Check if value exists or not.
-func (c *Cache) IsExist(key string) (bool, error) {
+func (c *Cache) IsExists(key string) (bool, error) {
 	item := c.get(key)
 	if item == nil {
 		return false, nil

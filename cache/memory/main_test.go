@@ -27,12 +27,12 @@ func TestCache(t *testing.T) {
 	assert.Equal(t, "London", vs2)
 
 	// IsExists/Clear
-	has, err := c.IsExist("city1")
+	has, err := c.IsExists("city1")
 	require.NoError(t, err)
 	assert.True(t, has)
 	err = c.Clear()
 	require.NoError(t, err)
-	has, err = c.IsExist("city1")
+	has, err = c.IsExists("city1")
 	require.NoError(t, err)
 	assert.False(t, has)
 
