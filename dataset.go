@@ -29,8 +29,8 @@ import (
 type DATASET uint32
 
 type DataSetManager interface {
-	//Find(ctx stdContext.Context, doc uint32, language uint16) (DataSet, error)
-	FindAll(ctx stdContext.Context, doc uint32) (DataSets, error)
+	Find(ctx stdContext.Context, id uint32, language uint16) (DataSet, error)
+	FindAll(ctx stdContext.Context, id uint32) (DataSets, error)
 }
 
 type DataSetConsumer func(key string, value string) error

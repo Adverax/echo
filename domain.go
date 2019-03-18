@@ -313,11 +313,11 @@ type Designer interface {
 }
 
 type MessageManager interface {
-	Find(ctx stdContext.Context, id uint32, lang uint16, region uint16) (string, error)
+	Find(ctx stdContext.Context, id uint32, lang uint16) (string, error)
 }
 
 type ResourceManager interface {
-	Find(ctx stdContext.Context, id uint32, lang uint16, region uint16) (string, error)
+	Find(ctx stdContext.Context, id uint32, lang uint16) (string, error)
 }
 
 var (

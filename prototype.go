@@ -85,7 +85,7 @@ type DefaultMessageManager struct {
 	family MessageFamily
 }
 
-func (manager *DefaultMessageManager) Find(ctx stdContext.Context, id uint32, lang uint16, region uint16) (string, error) {
+func (manager *DefaultMessageManager) Find(ctx stdContext.Context, id uint32, lang uint16) (string, error) {
 	return manager.family.Fetch(ctx, id)
 }
 
@@ -93,7 +93,7 @@ type DefaultResourceManager struct {
 	family ResourceFamily
 }
 
-func (manager *DefaultResourceManager) Find(ctx stdContext.Context, id uint32, lang uint16, region uint16) (string, error) {
+func (manager *DefaultResourceManager) Find(ctx stdContext.Context, id uint32, lang uint16) (string, error) {
 	return manager.family.Fetch(ctx, id)
 }
 
