@@ -73,8 +73,7 @@ var (
 )
 
 func DeclareDefaultMsg(msg MESSAGE, message string) MESSAGE {
-	messages := *echo.DefaultMessages
-	messages[uint32(msg)] = message
+	echo.DefaultMessages[uint32(msg)] = message
 	return msg
 }
 

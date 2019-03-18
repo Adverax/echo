@@ -82,6 +82,8 @@ type (
 		UrlLinker        UrlLinker
 		Cache            cache.Cache
 		Context          stdContext.Context
+		Messages         MessageManager
+		Resources        ResourceManager
 		DataSets         DataSetManager
 	}
 
@@ -279,12 +281,12 @@ func New() (e *Echo) {
 	e = &Echo{
 		Server:    new(http.Server),
 		TLSServer: new(http.Server),
-		Locale:    DefaultLocale,
-		UrlLinker: DefaultLinker,
-		Cache:     DefaultCache,
+		Locale:    Defaults.Locale,
+		UrlLinker: Defaults.UrlLinker,
+		Cache:     Defaults.Cache,
 		Context:   stdContext.Background(),
 		Logger:    log.NewDebug("\n"),
-		DataSets:  DefaultDatSetManager,
+		DataSets:  Defaults.DataSets,
 		AutoTLSManager: autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		},

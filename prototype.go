@@ -19,17 +19,18 @@ package echo
 
 import (
 	stdContext "context"
+	"github.com/adverax/echo/cache"
+	"github.com/adverax/echo/cache/memory"
 	"github.com/adverax/echo/data"
 	"net/url"
 	"time"
 
-	"github.com/adverax/echo/cache/memory"
 	"github.com/adverax/echo/generic"
 )
 
-type DefaultMessageManager map[uint32]string
+type DefaultMessageFamily map[uint32]string
 
-func (messages DefaultMessageManager) Fetch(
+func (messages DefaultMessageFamily) Fetch(
 	ctx stdContext.Context,
 	id uint32,
 ) (string, error) {
@@ -40,9 +41,9 @@ func (messages DefaultMessageManager) Fetch(
 	return "", nil
 }
 
-type DefaultResourceManager map[uint32]string
+type DefaultResourceFamily map[uint32]string
 
-func (messages DefaultResourceManager) Fetch(
+func (messages DefaultResourceFamily) Fetch(
 	ctx stdContext.Context,
 	id uint32,
 ) (string, error) {
@@ -80,28 +81,71 @@ func (linker *DefaultUrlLinker) Collapse(ctx Context, url string) string {
 	return url
 }
 
-type DefaultDataSetManager struct{}
+type DefaultMessageManager struct {
+	family MessageFamily
+}
+
+func (manager *DefaultMessageManager) Find(ctx stdContext.Context, id uint32, lang uint16, region uint16) (string, error) {
+	return manager.family.Fetch(ctx, id)
+}
+
+type DefaultResourceManager struct {
+	family ResourceFamily
+}
+
+func (manager *DefaultResourceManager) Find(ctx stdContext.Context, id uint32, lang uint16, region uint16) (string, error) {
+	return manager.family.Fetch(ctx, id)
+}
+
+type DefaultDataSetManager struct {
+	family DataSetFamily
+}
+
+func (manager *DefaultDataSetManager) Find(ctx stdContext.Context, doc uint32, lang uint16) (DataSet, error) {
+	return manager.family.Fetch(ctx, doc)
+}
 
 func (manager *DefaultDataSetManager) FindAll(ctx stdContext.Context, doc uint32) (DataSets, error) {
 	return nil, data.ErrNoMatch
 }
 
 var (
-	DefaultMessages      = &DefaultMessageManager{}
-	DefaultResources     = &DefaultResourceManager{}
-	DefaultDataSets      = &DefaultDataSetFamily{}
-	DefaultLinker        = &DefaultUrlLinker{}
-	DefaultCache         = memory.New(memory.Options{})
-	DefaultDatSetManager = &DefaultDataSetManager{}
-	DefaultLocale        = &BaseLocale{
-		DateFormat:     generic.DateFormat,
-		TimeFormat:     generic.TimeFormat,
-		DateTimeFormat: generic.DateTimeFormat,
-		Lang:           1,
-		TZone:          1,
-		Loc:            time.UTC,
-		Messages:       DefaultMessages,
-		Resources:      DefaultResources,
-		DataSets:       DefaultDataSets,
+	DefaultMessages  = make(DefaultMessageFamily)
+	DefaultResources = make(DefaultResourceFamily)
+	DefaultDataSets  = make(DefaultDataSetFamily)
+
+	Defaults = struct {
+		Messages        MessageManager
+		Resources       ResourceManager
+		DataSets        DataSetManager
+		UrlLinker       UrlLinker
+		Cache           cache.Cache
+		Locale          Locale
+		MessageManager  MessageManager
+		ResourceManager ResourceManager
+		DataSetManager  DataSetManager
+	}{
+		UrlLinker: &DefaultUrlLinker{},
+		Cache:     memory.New(memory.Options{}),
+		Messages: &DefaultMessageManager{
+			family: DefaultMessages,
+		},
+		Resources: &DefaultResourceManager{
+			family: DefaultResources,
+		},
+		DataSets: &DefaultDataSetManager{
+			family: DefaultDataSets,
+		},
+		Locale: &BaseLocale{
+			DateFormat:     generic.DateFormat,
+			TimeFormat:     generic.TimeFormat,
+			DateTimeFormat: generic.DateTimeFormat,
+			Lang:           1,
+			TZone:          1,
+			Loc:            time.UTC,
+			Messages:       DefaultMessages,
+			Resources:      DefaultResources,
+			DataSets:       DefaultDataSets,
+		},
 	}
 )

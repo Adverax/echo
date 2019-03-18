@@ -213,6 +213,9 @@ type Context interface {
 
 	// Get active locale
 	Locale() Locale
+
+	// Set active locale
+	SetLocale(locale Locale)
 }
 
 type context struct {
@@ -693,6 +696,10 @@ func (c *context) Reset(r *http.Request, w http.ResponseWriter) {
 
 func (c *context) Locale() Locale {
 	return c.locale
+}
+
+func (c *context) SetLocale(locale Locale) {
+	c.locale = locale
 }
 
 var boolMap = map[string]bool{
