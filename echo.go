@@ -103,7 +103,7 @@ type (
 	MiddlewareFunc func(HandlerFunc) HandlerFunc
 
 	// HandlerFunc defines a function to serve HTTP requests.
-	HandlerFunc func(Context) error
+	HandlerFunc func(ctx Context) error
 
 	// HTTPErrorHandler is a centralized HTTP error handler.
 	HTTPErrorHandler func(error, Context)

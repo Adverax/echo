@@ -383,7 +383,7 @@ func Open(
 	activator Activator,
 ) (db DB, err error) {
 	if activator == nil {
-		return open(dsc, dsc.Type)
+		return open(dsc, dsc.DbId)
 	}
 
 	db, err = activator(dsc)

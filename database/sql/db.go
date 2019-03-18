@@ -82,7 +82,7 @@ func (dsn *DSN) openSQL(driver string) (*sql.DB, Adapter, error) {
 // DataSource nodes cluster (first node is master)
 type DSC struct {
 	Driver string `json:"Driver"`
-	Type   DbId   `json:"-"`
+	DbId   DbId   `json:"-"`
 	DSN    []*DSN `json:"dsn"`
 }
 
