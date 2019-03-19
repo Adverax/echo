@@ -116,6 +116,57 @@ func round(a interface{}, p int, r_opt ...float64) float64 {
 	return round / pow
 }
 
+// Flow control functions.
+
+// The `coalesce` function takes a list of values and returns the first non-empty one.
+//     `coalesce 0 1 2` will returns `1`.
+// This function is useful for scanning through multiple variables or values:
+//     `coalesce .name .parent.name "Matt"
+// The above will first check to see if `.name` is empty. If it is not, it will return
+// that value. If it _is_ empty, `coalesce` will evaluate `.parent.name` for emptiness.
+// Finally, if both `.name` and `.parent.name` are empty, it will return `Matt`.
+func coalesce(v ...interface{}) interface{} {
+	for _, val := range v {
+		if !empty(val) {
+			return val
+		}
+	}
+	return nil
+}
+
+// empty returns true if the given value has the zero value for its type.
+// The `empty` function returns `true` if the given value is considered empty, and
+// `false` otherwise. The empty values are listed in the `default` section.
+//     `empty .Foo`
+// Note that in Go template conditionals, emptiness is calculated for you. Thus,
+// you rarely need `if empty .Foo`. Instead, just use `if .Foo`.
+func empty(given interface{}) bool {
+	g := reflect.ValueOf(given)
+	if !g.IsValid() {
+		return true
+	}
+
+	// Basically adapted from text/template.isTrue
+	switch g.Kind() {
+	default:
+		return g.IsNil()
+	case reflect.Array, reflect.Slice, reflect.Map, reflect.String:
+		return g.Len() == 0
+	case reflect.Bool:
+		return g.Bool() == false
+	case reflect.Complex64, reflect.Complex128:
+		return g.Complex() == 0
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return g.Int() == 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
+		return g.Uint() == 0
+	case reflect.Float32, reflect.Float64:
+		return g.Float() == 0
+	case reflect.Struct:
+		return false
+	}
+}
+
 // Functions for handle lists.
 // Simple `list` type that can contain arbitrary sequential lists
 // of data. This is similar to arrays or slices, but lists are designed to be used
@@ -671,6 +722,10 @@ func FuncMap() template.FuncMap {
 }
 
 var genericMap = map[string]interface{}{
+	// Flow control
+	"coalesce": coalesce,
+	"empty":    empty,
+
 	// basic arithmetic.
 	"add":     add,
 	"sub":     sub,

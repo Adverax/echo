@@ -6,6 +6,59 @@ import (
 	"testing"
 )
 
+func TestEmpty(t *testing.T) {
+	tpl := `{{if empty 1}}1{{else}}0{{end}}`
+	if err := runt(tpl, "0"); err != nil {
+		t.Error(err)
+	}
+
+	tpl = `{{if empty 0}}1{{else}}0{{end}}`
+	if err := runt(tpl, "1"); err != nil {
+		t.Error(err)
+	}
+	tpl = `{{if empty ""}}1{{else}}0{{end}}`
+	if err := runt(tpl, "1"); err != nil {
+		t.Error(err)
+	}
+	tpl = `{{if empty 0.0}}1{{else}}0{{end}}`
+	if err := runt(tpl, "1"); err != nil {
+		t.Error(err)
+	}
+	tpl = `{{if empty false}}1{{else}}0{{end}}`
+	if err := runt(tpl, "1"); err != nil {
+		t.Error(err)
+	}
+
+	dict := map[string]interface{}{"top": map[string]interface{}{}}
+	tpl = `{{if empty .top.NoSuchThing}}1{{else}}0{{end}}`
+	if err := runtv(tpl, "1", dict); err != nil {
+		t.Error(err)
+	}
+	tpl = `{{if empty .bottom.NoSuchThing}}1{{else}}0{{end}}`
+	if err := runtv(tpl, "1", dict); err != nil {
+		t.Error(err)
+	}
+}
+func TestCoalesce(t *testing.T) {
+	tests := map[string]string{
+		`{{ coalesce 1 }}`:                            "1",
+		`{{ coalesce "" 0 nil 2 }}`:                   "2",
+		`{{ $two := 2 }}{{ coalesce "" 0 nil $two }}`: "2",
+		`{{ $two := 2 }}{{ coalesce "" $two 0 0 0 }}`: "2",
+		`{{ $two := 2 }}{{ coalesce "" $two 3 4 5 }}`: "2",
+		`{{ coalesce }}`:                              "",
+	}
+	for tpl, expect := range tests {
+		assert.NoError(t, runt(tpl, expect))
+	}
+
+	dict := map[string]interface{}{"top": map[string]interface{}{}}
+	tpl := `{{ coalesce .top.NoSuchThing .bottom .bottom.dollar "airplane"}}`
+	if err := runtv(tpl, "airplane", dict); err != nil {
+		t.Error(err)
+	}
+}
+
 func TestList(t *testing.T) {
 	tpl := `{{$t := list 1 "a" "foo"}}{{index $t 2}}{{index $t 0 }}{{index $t 1}}`
 	if err := runt(tpl, "foo1a"); err != nil {

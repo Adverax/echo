@@ -31,8 +31,8 @@ type Template interface {
 }
 
 type Designer interface {
-	// Parse templates (with relative paths)
-	ParseFiles(files ...string) Template
+	// Parse templates (with relative paths or aliases, starts with "@")
+	Compile(files ...string) Template
 	// Create new child designer.
 	// Method create new Designer with related path.
 	// Method extends set of funcs and views.
@@ -86,14 +86,17 @@ func (d *designer) Extends(
 	}
 }
 
-func (d *designer) ParseFiles(files ...string) Template {
+func (d *designer) Compile(files ...string) Template {
 	tpl := template.New("main").Funcs(d.funcs)
 	var list []string
 
 	for _, file := range files {
 		if strings.HasPrefix(file, "@") {
-			file = "/" + file[1:]
+			file = file[1:]
 			name := getFileName(file)
+			if !strings.HasPrefix(file, "/") {
+				file = "/" + file
+			}
 			if item, has := d.views[name]; has {
 				tpl = template.Must(tpl.AddParseTree(item.Name(), item.Tree))
 			} else {
@@ -138,6 +141,8 @@ func getFileName(file string) string {
 	if strings.HasPrefix(file, "/") {
 		file = file[1:]
 	}
-
-	return strings.TrimSuffix(file, filepath.Ext(file))
+	if strings.HasSuffix(file, ".tmpl") || strings.HasSuffix(file, ".tpl") {
+		return strings.TrimSuffix(file, filepath.Ext(file))
+	}
+	return file
 }

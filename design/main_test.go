@@ -52,7 +52,7 @@ func TestDesigner(t *testing.T) {
 		"/main.tmpl",
 	)
 
-	tpl := d.ParseFiles("@main", "/content.tmpl", "/library.tmpl")
+	tpl := d.Compile("@main", "/content.tmpl", "/library.tmpl")
 
 	var buf bytes.Buffer
 	err := tpl.Execute(&buf, "Jack")
