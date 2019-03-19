@@ -3,7 +3,10 @@ package design
 import (
 	"bytes"
 	"fmt"
+	"github.com/adverax/echo"
+	"github.com/stretchr/testify/assert"
 	"html/template"
+	"testing"
 )
 
 // runt runs a template and checks that the output exactly matches the expected string.
@@ -38,4 +41,21 @@ func runRaw(tpl string, vars interface{}) (string, error) {
 		return "", err
 	}
 	return b.String(), nil
+}
+
+func TestDesigner(t *testing.T) {
+	d := NewDesigner(
+		echo.New(),
+		nil,
+		"../_fixture/views",
+		"../_fixture/views",
+		"/main.tmpl",
+	)
+
+	tpl := d.ParseFiles("@main", "/content.tmpl", "/library.tmpl")
+
+	var buf bytes.Buffer
+	err := tpl.Execute(&buf, "Jack")
+	assert.NoError(t, err)
+	assert.Equal(t, "Header\n\nHello, Jack.\n\nElement.\n\n\nFooter", buf.String())
 }

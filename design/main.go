@@ -20,6 +20,7 @@ package design
 import (
 	"html/template"
 	"io"
+	"path/filepath"
 	"strings"
 
 	"github.com/adverax/echo"
@@ -88,21 +89,19 @@ func (d *designer) Extends(
 func (d *designer) ParseFiles(files ...string) Template {
 	tpl := template.New("main").Funcs(d.funcs)
 	var list []string
+
 	for _, file := range files {
 		if strings.HasPrefix(file, "@") {
-			name := file[1:]
+			file = "/" + file[1:]
+			name := getFileName(file)
 			if item, has := d.views[name]; has {
-				tpl = template.Must(tpl.AddParseTree(name, item.Tree))
+				tpl = template.Must(tpl.AddParseTree(item.Name(), item.Tree))
 			} else {
-				tpl = template.Must(tpl.ParseFiles(d.layouts + name))
+				tpl = template.Must(tpl.ParseFiles(d.layouts + file))
 			}
 		} else {
 			list = append(list, d.path+file)
 		}
-	}
-
-	if len(list) == 0 {
-		return tpl
 	}
 
 	return template.Must(tpl.ParseFiles(list...))
@@ -120,8 +119,10 @@ func NewDesigner(
 	}
 
 	vs := make(map[string]*template.Template)
+
 	for _, view := range views {
-		vs[view] = template.Must(template.New(view).ParseFiles(layouts + view))
+		name := getFileName(view)
+		vs[name] = template.Must(template.ParseFiles(layouts + view))
 	}
 
 	return &designer{
@@ -131,4 +132,12 @@ func NewDesigner(
 		funcs:   funcs,
 		views:   vs,
 	}
+}
+
+func getFileName(file string) string {
+	if strings.HasPrefix(file, "/") {
+		file = file[1:]
+	}
+
+	return strings.TrimSuffix(file, filepath.Ext(file))
 }
