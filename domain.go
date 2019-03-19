@@ -21,7 +21,6 @@ import (
 	stdContext "context"
 	"encoding/gob"
 	"fmt"
-	"html/template"
 	"io"
 	"net/url"
 	"time"
@@ -295,29 +294,16 @@ type UrlLinker interface {
 	Collapse(ctx Context, url string) string
 }
 
-type Template interface {
-	Execute(wr io.Writer, data interface{}) error
-}
-
-type FuncMap = template.FuncMap
-
-type Designer interface {
-	// Parse templates (with relative paths)
-	ParseFiles(files ...string) Template
-	// Create new child designer.
-	// Method create new Designer with related path.
-	// Method extends set of funcs and views.
-	Extends(funcs template.FuncMap, path string, views ...string) Designer
-	// Get application
-	Echo() *Echo
-}
-
 type MessageManager interface {
 	Find(ctx stdContext.Context, id uint32, lang uint16) (string, error)
 }
 
 type ResourceManager interface {
 	Find(ctx stdContext.Context, id uint32, lang uint16) (string, error)
+}
+
+type Template interface {
+	Execute(wr io.Writer, data interface{}) error
 }
 
 var (

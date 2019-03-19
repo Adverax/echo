@@ -1,5 +1,6 @@
 package echo
 
+/*
 import (
 	"bytes"
 	"github.com/stretchr/testify/assert"
@@ -26,3 +27,4 @@ func TestRenderer(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "Header\n\nHello, Jack.\n\nElement.\n\n\nFooter", buf.String())
 }
+*/

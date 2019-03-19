@@ -17,6 +17,7 @@
 
 package echo
 
+/*
 import (
 	"fmt"
 	"html/template"
@@ -94,4 +95,4 @@ func NewRenderer(
 		registry: registry,
 		funcs:    funcs,
 	}
-}
+}*/
