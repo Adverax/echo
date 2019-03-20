@@ -18,7 +18,6 @@
 package generic
 
 import (
-	"fmt"
 	"reflect"
 	"strconv"
 	"time"
@@ -69,20 +68,12 @@ func ConvertToString(val interface{}) (string, bool) {
 	case time.Time:
 		return v.Format(DateTimeFormat), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return strconv.FormatInt(rv.Int(), 10), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return strconv.FormatUint(rv.Uint(), 10), true
-		case reflect.Float64:
-			return strconv.FormatFloat(rv.Float(), 'g', -1, 64), true
-		case reflect.Float32:
-			return strconv.FormatFloat(rv.Float(), 'g', -1, 32), true
-		case reflect.Bool:
-			return strconv.FormatBool(rv.Bool()), true
+		var res string
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return "", false
 		}
-		return fmt.Sprintf("%v", val), true
+		return res, true
 	}
 }
 
@@ -150,24 +141,12 @@ func ConvertToInt(val interface{}) (int, bool) {
 		}
 		return int(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return int(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return int(rv.Uint()), true
-		case reflect.Float64:
-			return int(rv.Float()), true
-		case reflect.Float32:
-			return int(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res int
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -210,24 +189,12 @@ func ConvertToInt8(val interface{}) (int8, bool) {
 		}
 		return int8(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return int8(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return int8(rv.Uint()), true
-		case reflect.Float64:
-			return int8(rv.Float()), true
-		case reflect.Float32:
-			return int8(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res int8
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -270,24 +237,12 @@ func ConvertToInt16(val interface{}) (int16, bool) {
 		}
 		return int16(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return int16(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return int16(rv.Uint()), true
-		case reflect.Float64:
-			return int16(rv.Float()), true
-		case reflect.Float32:
-			return int16(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res int16
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -330,24 +285,12 @@ func ConvertToInt32(val interface{}) (int32, bool) {
 		}
 		return int32(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return int32(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return int32(rv.Uint()), true
-		case reflect.Float64:
-			return int32(rv.Float()), true
-		case reflect.Float32:
-			return int32(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res int32
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -392,24 +335,12 @@ func ConvertToInt64(val interface{}) (int64, bool) {
 	case time.Time:
 		return v.Unix(), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return int64(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return int64(rv.Uint()), true
-		case reflect.Float64:
-			return int64(rv.Float()), true
-		case reflect.Float32:
-			return int64(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res int64
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -452,24 +383,12 @@ func ConvertToUint(val interface{}) (uint, bool) {
 		}
 		return uint(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return uint(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return uint(rv.Uint()), true
-		case reflect.Float64:
-			return uint(rv.Float()), true
-		case reflect.Float32:
-			return uint(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res uint
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -512,24 +431,12 @@ func ConvertToUint8(val interface{}) (uint8, bool) {
 		}
 		return uint8(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return uint8(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return uint8(rv.Uint()), true
-		case reflect.Float64:
-			return uint8(rv.Float()), true
-		case reflect.Float32:
-			return uint8(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res uint8
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -572,24 +479,12 @@ func ConvertToUint16(val interface{}) (uint16, bool) {
 		}
 		return uint16(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return uint16(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return uint16(rv.Uint()), true
-		case reflect.Float64:
-			return uint16(rv.Float()), true
-		case reflect.Float32:
-			return uint16(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res uint16
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -632,24 +527,12 @@ func ConvertToUint32(val interface{}) (uint32, bool) {
 		}
 		return uint32(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return uint32(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return uint32(rv.Uint()), true
-		case reflect.Float64:
-			return uint32(rv.Float()), true
-		case reflect.Float32:
-			return uint32(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res uint32
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -694,24 +577,12 @@ func ConvertToUint64(val interface{}) (uint64, bool) {
 	case time.Time:
 		return uint64(v.Unix()), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return uint64(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return uint64(rv.Uint()), true
-		case reflect.Float64:
-			return uint64(rv.Float()), true
-		case reflect.Float32:
-			return uint64(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res uint64
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -754,24 +625,12 @@ func ConvertToFloat32(val interface{}) (float32, bool) {
 		}
 		return float32(vv), true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return float32(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return float32(rv.Uint()), true
-		case reflect.Float64:
-			return float32(rv.Float()), true
-		case reflect.Float32:
-			return float32(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res float32
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -814,24 +673,12 @@ func ConvertToFloat64(val interface{}) (float64, bool) {
 		}
 		return vv, true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return float64(rv.Int()), true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return float64(rv.Uint()), true
-		case reflect.Float64:
-			return float64(rv.Float()), true
-		case reflect.Float32:
-			return float64(rv.Float()), true
-		case reflect.Bool:
-			if rv.Bool() {
-				return 1, true
-			} else {
-				return 0, true
-			}
+		var res float64
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return 0, false
 		}
-		return 0, false
+		return res, true
 	}
 }
 
@@ -866,20 +713,12 @@ func ConvertToBoolean(val interface{}) (bool, bool) {
 	case string:
 		return v != "", true
 	default:
-		rv := reflect.ValueOf(val)
-		switch rv.Kind() {
-		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-			return rv.Int() != 0, true
-		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-			return rv.Uint() != 0, true
-		case reflect.Float64:
-			return rv.Float() != 0, true
-		case reflect.Float32:
-			return rv.Float() != 0, true
-		case reflect.Bool:
-			return rv.Bool(), true
+		var res bool
+		err := ConvertAssign(&res, v)
+		if err != nil {
+			return false, false
 		}
-		return false, false
+		return res, true
 	}
 }
 

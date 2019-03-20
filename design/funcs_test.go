@@ -39,6 +39,7 @@ func TestEmpty(t *testing.T) {
 		t.Error(err)
 	}
 }
+
 func TestCoalesce(t *testing.T) {
 	tests := map[string]string{
 		`{{ coalesce 1 }}`:                            "1",
