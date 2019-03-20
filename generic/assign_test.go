@@ -25,4 +25,11 @@ func TestConvertAssign(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, color(10), dst)
 	}
+	{
+		type color int
+		var dst int
+		err := ConvertAssign(&dst, color(10))
+		assert.NoError(t, err)
+		assert.Equal(t, int(10), dst)
+	}
 }

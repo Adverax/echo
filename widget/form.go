@@ -135,17 +135,18 @@ func (w *Form) Render(
 type FormFieldFilterFunc func(value string) string
 
 type FormField struct {
-	Id       string                // Field identifier
-	Name     string                // Field name
-	Label    interface{}           // Field label
-	Disabled bool                  // Field disabled
-	Hidden   bool                  // Field is hidden (not rendered)
-	Filter   FormFieldFilterFunc   // Custom filter
-	Codec    echo.Codec            // Field codec (optional)
-	Default  interface{}           // Default value
-	val      interface{}           // Internal representation of value
-	value    string                // External representation of value
-	errors   echo.ValidationErrors // Field errors
+	Id          string                // Field identifier
+	Name        string                // Field name
+	Label       interface{}           // Field label
+	Disabled    bool                  // Field disabled
+	Hidden      bool                  // Field is hidden (not rendered)
+	Filter      FormFieldFilterFunc   // Custom filter
+	Codec       echo.Codec            // Field codec (optional)
+	Default     interface{}           // Default value
+	val         interface{}           // Internal representation of value
+	value       string                // External representation of value
+	errors      echo.ValidationErrors // Field errors
+	initialized bool                  // Field is initialized
 }
 
 func (field *FormField) GetName() string {
@@ -184,6 +185,7 @@ func (field *FormField) GetBoolean() bool {
 // Set internal value of the field
 func (field *FormField) SetVal(ctx echo.Context, value interface{}) {
 	field.val = value
+	field.initialized = true
 	if field.Codec == nil {
 		field.value, _ = generic.ConvertToString(value)
 	} else {
@@ -202,6 +204,7 @@ func (field *FormField) SetValue(ctx echo.Context, value string) error {
 		value = field.Filter(value)
 	}
 
+	field.initialized = true
 	field.value = value
 	if field.Codec == nil {
 		field.val = value
@@ -266,7 +269,9 @@ func (field *FormField) Reset(ctx echo.Context) error {
 	field.errors = nil
 	field.value = ""
 	field.val = nil
-	field.SetVal(ctx, field.Default)
+	if !field.initialized {
+		field.SetVal(ctx, field.Default)
+	}
 	return nil
 }
 

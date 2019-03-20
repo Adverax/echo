@@ -239,7 +239,6 @@ type MultiStepForm struct {
 
 func (w *MultiStepForm) Execute(
 	ctx echo.Context,
-	hub interface{},
 ) (state *MultiStepState, err error) {
 	state = new(MultiStepState)
 	storage := w.getStorage(ctx)
@@ -311,7 +310,7 @@ func (w *MultiStepForm) Execute(
 
 	// Load and validate date
 	if request.Method == http.MethodPost {
-		err = model.Bind(ctx, hub)
+		err = model.Bind(ctx)
 		if err != nil {
 			return
 		}
@@ -327,7 +326,7 @@ func (w *MultiStepForm) Execute(
 				}
 			}
 
-			reply, err := stage.Consume(ctx, state, hub)
+			reply, err := stage.Consume(ctx, state, model)
 			if err != nil {
 				return nil, err
 			}

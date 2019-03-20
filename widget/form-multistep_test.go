@@ -99,7 +99,7 @@ func payHandler(strategy *payStrategy) echo.HandlerFunc {
 			Timeout:  time.Hour,
 		}
 
-		state, err := form.Execute(ctx, nil)
+		state, err := form.Execute(ctx)
 		if err != nil || state == nil {
 			if err == echo.ErrAbort {
 				return nil

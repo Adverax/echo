@@ -22,10 +22,10 @@ import (
 	"github.com/adverax/echo/cache"
 	"github.com/adverax/echo/cache/memory"
 	"github.com/adverax/echo/data"
-	"net/url"
-	"time"
-
 	"github.com/adverax/echo/generic"
+	"net/url"
+	"strings"
+	"time"
 )
 
 type DefaultMessageFamily map[uint32]string
@@ -110,6 +110,10 @@ func (manager *DefaultDataSetManager) FindAll(ctx stdContext.Context, doc uint32
 }
 
 var (
+	DefaultMapper = MapperFunc(func(name string) (string, bool) {
+		return strings.Title(name), true
+	})
+
 	DefaultMessages  = make(DefaultMessageFamily)
 	DefaultResources = make(DefaultResourceFamily)
 	DefaultDataSets  = make(DefaultDataSetFamily)

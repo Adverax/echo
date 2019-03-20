@@ -60,7 +60,24 @@ func myLoginHandler(ctx echo.Context) error {
 	return nil
 */
 
-// Abstract field. Implemented by descendands of field.
+type Mapper interface {
+	Execute(name string) (string, bool)
+}
+
+type MapperFunc func(name string) (string, bool)
+
+func (fn MapperFunc) Execute(name string) (string, bool) {
+	return fn(name)
+}
+
+type DictMapper map[string]string
+
+func (mapper DictMapper) Execute(name string) (string, bool) {
+	res, ok := mapper[name]
+	return res, ok
+}
+
+// Abstract field. Implemented by descendants of field.
 type ModelField interface {
 	// Field has no errors
 	IsValid() bool
@@ -98,9 +115,9 @@ func (model Model) Clone() Model {
 	return res
 }
 
+// Bind works with not structured data only.
 func (model Model) Bind(
 	ctx Context,
-	rec interface{},
 	validators ...ValidatorFunc,
 ) error {
 	req := ctx.Request()
@@ -114,12 +131,15 @@ func (model Model) Bind(
 				return
 			}
 			return NewHTTPError(http.StatusBadRequest, "Request body can't be empty")
-		}*/
+		}
+	*/
 
+	var params map[string][]string
 	ctype := req.Header.Get(HeaderContentType)
 	switch {
 	case strings.HasPrefix(ctype, MIMEApplicationJSON):
-		if err := json.NewDecoder(req.Body).Decode(rec); err != nil {
+		var raw map[string]string
+		if err := json.NewDecoder(req.Body).Decode(raw); err != nil {
 			if ute, ok := err.(*json.UnmarshalTypeError); ok {
 				return NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unmarshal type error: expected=%v, got=%v, field=%v, offset=%v", ute.Type, ute.Value, ute.Field, ute.Offset)).SetInternal(err)
 			} else if se, ok := err.(*json.SyntaxError); ok {
@@ -127,8 +147,10 @@ func (model Model) Bind(
 			}
 			return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
+		params = MakeModelParams(raw)
 	case strings.HasPrefix(ctype, MIMEApplicationXML), strings.HasPrefix(ctype, MIMETextXML):
-		if err := xml.NewDecoder(req.Body).Decode(rec); err != nil {
+		var raw map[string]string
+		if err := xml.NewDecoder(req.Body).Decode(raw); err != nil {
 			if ute, ok := err.(*xml.UnsupportedTypeError); ok {
 				return NewHTTPError(http.StatusBadRequest, fmt.Sprintf("Unsupported type error: type=%v, error=%v", ute.Type, ute.Error())).SetInternal(err)
 			} else if se, ok := err.(*xml.SyntaxError); ok {
@@ -137,15 +159,17 @@ func (model Model) Bind(
 			return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
 	case strings.HasPrefix(ctype, MIMEApplicationForm), strings.HasPrefix(ctype, MIMEMultipartForm):
-		params, err := ctx.FormParams()
+		var err error
+		params, err = ctx.FormParams()
 		if err != nil {
-			return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
-		}
-		if err = model.BindFrom(ctx, params, rec, validators...); err != nil {
 			return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 		}
 	default:
 		return ErrUnsupportedMediaType
+	}
+
+	if err := model.BindFrom(ctx, params, validators...); err != nil {
+		return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 	}
 
 	return nil
@@ -154,66 +178,25 @@ func (model Model) Bind(
 func (model Model) BindFrom(
 	ctx Context,
 	data map[string][]string,
-	rec interface{},
 	validators ...ValidatorFunc,
 ) error {
-	if rec == nil {
-		// Skip record assignment
-		for _, item := range model {
-			if field, ok := item.(ModelField); ok {
-				err := field.Reset(ctx)
-				if err != nil {
-					return err
-				}
-
-				if field.GetDisabled() || field.GetHidden() {
-					continue
-				}
-
-				name := field.GetName()
-				value, ok := data[name]
-				if ok && len(value) != 0 {
-					err := field.SetValue(ctx, value[0])
-					if err != nil {
-						return err
-					}
-				}
+	for _, item := range model {
+		if field, ok := item.(ModelField); ok {
+			err := field.Reset(ctx)
+			if err != nil {
+				return err
 			}
-		}
-	} else {
-		// Use record assignment
-		record := reflect.ValueOf(rec)
-		if record.Type().Kind() == reflect.Ptr {
-			record = record.Elem()
-		}
 
-		for _, item := range model {
-			if field, ok := item.(ModelField); ok {
-				err := field.Reset(ctx)
+			if field.GetDisabled() || field.GetHidden() {
+				continue
+			}
+
+			name := field.GetName()
+			value, ok := data[name]
+			if ok && len(value) != 0 {
+				err := field.SetValue(ctx, value[0])
 				if err != nil {
 					return err
-				}
-
-				f := record.FieldByName(field.GetName())
-				if f.Kind() == reflect.Invalid {
-					continue
-				}
-
-				if f.CanInterface() {
-					field.SetVal(ctx, f.Interface())
-				}
-
-				if f.CanSet() {
-					value, ok := data[field.GetName()]
-					if ok && len(value) != 0 {
-						err := field.SetValue(ctx, value[0])
-						if err != nil {
-							return err
-						}
-
-						dst := f.Addr().Interface()
-						_ = generic.ConvertAssign(dst, field.GetVal())
-					}
 				}
 			}
 		}
@@ -248,14 +231,82 @@ func (model Model) IsValid() bool {
 	return true
 }
 
+func (model Model) AssignFrom(
+	ctx Context,
+	src interface{},
+	mapper Mapper,
+) error {
+	if mapper == nil {
+		mapper = DefaultMapper
+	}
+	rec := reflect.ValueOf(src)
+	if rec.Kind() == reflect.Ptr {
+		rec = rec.Elem()
+	}
+	if rec.Kind() != reflect.Struct {
+		return fmt.Errorf("invalid type of source")
+	}
+
+	for _, item := range model {
+		if field, ok := item.(ModelField); ok {
+			if field == nil {
+				continue
+			}
+			if name, ok := mapper.Execute(field.GetName()); ok {
+				f := rec.FieldByName(name)
+				if f.Kind() != reflect.Invalid {
+					if f.CanInterface() {
+						field.SetVal(ctx, f.Interface())
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (model Model) AssignTo(
+	ctx Context,
+	dst interface{},
+	mapper Mapper,
+) error {
+	if mapper == nil {
+		mapper = DefaultMapper
+	}
+
+	rec := reflect.ValueOf(dst).Elem()
+	if rec.Kind() != reflect.Struct {
+		return fmt.Errorf("invalid type of source")
+	}
+
+	for _, item := range model {
+		if field, ok := item.(ModelField); ok {
+			if field == nil {
+				continue
+			}
+			if name, ok := mapper.Execute(field.GetName()); ok {
+				f := rec.FieldByName(name)
+				if f.Kind() != reflect.Invalid {
+					if f.CanSet() {
+						dst := f.Addr().Interface()
+						_ = generic.ConvertAssign(dst, field.GetVal())
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 type Models []Model
 
 func (models Models) Bind(
 	ctx Context,
-	recs []interface{},
 ) error {
-	for i, model := range models {
-		err := model.Bind(ctx, recs[i])
+	for _, model := range models {
+		err := model.Bind(ctx)
 		if err != nil {
 			return err
 		}
@@ -275,4 +326,13 @@ func (models Models) IsValid() bool {
 // Create name of field of band
 func MakeMultiModelName(key, name string) string {
 	return fmt.Sprintf("[%s].%s", key, name)
+}
+
+// Create model parameters from map.
+func MakeModelParams(raw map[string]string) map[string][]string {
+	params := make(map[string][]string, len(raw))
+	for k, v := range raw {
+		params[k] = []string{v}
+	}
+	return params
 }

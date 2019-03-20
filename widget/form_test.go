@@ -535,12 +535,6 @@ func TestModel_Bind(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	ctx := e.NewContext(req, httptest.NewRecorder())
 
-	rec := struct {
-		Username string
-	}{
-		Username: "Default",
-	}
-
 	username := &FormField{
 		Name: "Username",
 	}
@@ -551,8 +545,67 @@ func TestModel_Bind(t *testing.T) {
 		map[string][]string{
 			"Username": {"Bob"},
 		},
-		&rec,
 	)
+	assert.NoError(t, err)
+	assert.Equal(t, "Bob", username.GetString())
+}
+
+func TestModel_AssignFrom(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	ctx := e.NewContext(req, httptest.NewRecorder())
+
+	username := &FormField{
+		Name: "username",
+	}
+
+	region := &FormField{
+		Name: "region",
+	}
+
+	model := echo.Model{
+		"username": username,
+		"region":   region,
+	}
+
+	var rec = struct {
+		Username string
+		Password string
+	}{
+		Username: "Bob",
+	}
+
+	err := model.AssignFrom(ctx, rec, nil)
+	assert.NoError(t, err)
+	assert.Equal(t, "Bob", username.GetString())
+}
+
+func TestModel_AssignTo(t *testing.T) {
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/", nil)
+	ctx := e.NewContext(req, httptest.NewRecorder())
+
+	username := &FormField{
+		Name: "Username",
+	}
+
+	region := &FormField{
+		Name: "Region",
+	}
+
+	model := echo.Model{
+		"username": username,
+		"region":   region,
+	}
+
+	username.SetVal(ctx, "Bob")
+
+	var rec struct {
+		Username string
+		Password string
+	}
+
+	err := model.AssignTo(ctx, &rec, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "Bob", rec.Username)
 }
