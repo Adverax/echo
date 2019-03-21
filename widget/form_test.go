@@ -27,7 +27,7 @@ import (
 	"testing"
 )
 
-func TestRenderFormElement(t *testing.T) {
+func TestFormComponent_Render(t *testing.T) {
 	type Test struct {
 		src echo.ModelField
 		val interface{}
@@ -44,56 +44,25 @@ func TestRenderFormElement(t *testing.T) {
 
 	tests := map[string]Test{
 		"FormHidden": {
-			src: &FormTextArea{
-				FormField: FormField{
-					Name: "Challenge",
-				},
+			src: &FormText{
+				Name: "Challenge",
 			},
 			val: "1234567890",
 			dst: `{"Name":"Challenge","Value":"1234567890"}`,
 		},
 
-		"FormTextInput: simple": {
-			src: &FormTextInput{
-				FormField: FormField{
-					Name:  "Username",
-					Label: "User name",
-				},
-			},
-			dst: `{"Label":"User name","Name":"Username"}`,
-		},
-		"FormTextInput: complex": {
-			src: &FormTextInput{
-				FormField: FormField{
-					Name:     "Username",
-					Label:    "User name",
-					Disabled: true,
-				},
-				Required:    true,
-				Pattern:     `[A-Za-z]{3,64}`,
-				Placeholder: "Input your name",
-				MaxLength:   64,
-			},
-			val: "Tom",
-			dst: `{"Disabled":true,"Label":"User name","MaxLen":64,"Name":"Username","Pattern":"[A-Za-z]{3,64}","Placeholder":"Input your name","Required":true,"Value":"Tom"}`,
-		},
-
-		"FormTextArea: simple": {
-			src: &FormTextArea{
-				FormField: FormField{
-					Name:  "Comments",
-					Label: "Comments",
-				},
+		"FormText: simple": {
+			src: &FormText{
+				Name:  "Comments",
+				Label: "Comments",
 			},
 			dst: `{"Label":"Comments","Name":"Comments"}`,
 		},
-		"FormTextArea: complex": {
-			src: &FormTextArea{
-				FormField: FormField{
-					Name:     "Comments",
-					Label:    "Comments",
-					Disabled: true,
-				},
+		"FormText: complex": {
+			src: &FormText{
+				Name:        "Comments",
+				Label:       "Comments",
+				Disabled:    true,
 				Required:    true,
 				Pattern:     `[A-Za-z ]+`,
 				Placeholder: "Enter your comments",
@@ -105,64 +74,61 @@ func TestRenderFormElement(t *testing.T) {
 			dst: `{"Disabled":true,"Label":"Comments","MaxLen":1024,"Name":"Comments","Pattern":"[A-Za-z ]+","Placeholder":"Enter your comments","Readonly":true,"Required":true,"Rows":16,"Value":"My comments"}`,
 		},
 
-		"FormFileInput": {
-			src: &FormFileInput{
-				FormField: FormField{
-					Name:  "File",
-					Label: "File",
-				},
-				Accept: "*.doc",
-			},
-			dst: `{"Accept":"*.doc","Label":"File","Name":"File"}`,
-		},
-
-		"FormSelector: simple": {
-			src: &FormSelector{
-				FormField: FormField{
-					Name:     "City",
-					Label:    "City",
-					Disabled: false,
-				},
+		"FormSelect: simple": {
+			src: &FormSelect{
+				Name:     "City",
+				Label:    "City",
+				Disabled: false,
 				Required: true,
 				Items:    cities,
 			},
 			val: 2,
 			dst: `{"Items":[{"Label":"London","Value":"1"},{"Label":"Paris","Selected":true,"Value":"2"}],"Label":"City","Name":"City","Required":true}`,
 		},
-		"FormSelector: complex": {
-			src: &FormSelector{
-				FormField: FormField{
-					Name:     "City",
-					Label:    "City",
-					Disabled: false,
-				},
+		"FormSelect: complex": {
+			src: &FormSelect{
+				Name:     "City",
+				Label:    "City",
+				Disabled: false,
 				Required: false,
 				Items:    cities,
 			},
-			dst: `{"Items":[{"Label":"(Empty)","Value":""},{"Label":"London","Value":"1"},{"Label":"Paris","Value":"2"}],"Label":"City","Name":"City"}`,
+			dst: `{"Empty":"(Empty)","Items":[{"Label":"London","Value":"1"},{"Label":"Paris","Value":"2"}],"Label":"City","Name":"City"}`,
 		},
 
-		"FormCheckBox": {
-			src: &FormCheckBox{
-				FormField: FormField{
-					Name:  "Gender",
-					Label: "Mail",
-					Codec: CheckBoxCodec,
-				},
+		"FormMultiSelect: simple": {
+			src: &FormMultiSelect{
+				Name:  "Option",
+				Label: "Input option",
 			},
-			val: true,
-			dst: `{"Checked":true,"Label":"Mail","Name":"Gender"}`,
+			val: []string{"on"},
+			dst: `{"Label":"Input option","Name":"Option","Value":"on"}`,
 		},
 
-		"FormSubmit": {
-			src: &FormSubmit{
-				FormField: FormField{
-					Name:  "Accept",
-					Label: "Accept",
-				},
+		"FormMultiSelect: complex": {
+			src: &FormMultiSelect{
+				Name:  "Option",
+				Label: "Input option",
+				Items: cities,
 			},
-			val: "accept",
-			dst: `{"Label":"Accept","Name":"Accept","Value":"accept"}`,
+			val: []string{"1", "2"},
+			dst: `{"Items":[{"Label":"London","Selected":true,"Value":"1"},{"Label":"Paris","Selected":true,"Value":"2"}],"Label":"Input option","Name":"Option"}`,
+		},
+
+		"FormSubmit: simple": {
+			src: &FormMultiSelect{
+				Label: "Accept",
+			},
+			dst: `{"Label":"Accept"}`,
+		},
+
+		"FormFile": {
+			src: &FormFile{
+				Name:   "File",
+				Label:  "File",
+				Accept: "*.doc",
+			},
+			dst: `{"Accept":"*.doc","Label":"File","Name":"File"}`,
 		},
 	}
 
@@ -186,9 +152,9 @@ func TestFormComponent_SetValue(t *testing.T) {
 	type Test struct {
 		// input
 		field echo.ModelField
-		src   string
+		src   []string
 		// Output
-		dst    string
+		dst    []string
 		val    interface{}
 		errors echo.ValidationErrors
 	}
@@ -203,25 +169,26 @@ func TestFormComponent_SetValue(t *testing.T) {
 
 	tests := map[string]Test{
 		"FormTextInput: Default must be accepted": {
-			field: &FormTextInput{},
-			src:   "123",
-			dst:   "123",
+			field: &FormText{},
+			src:   []string{"123"},
+			dst:   []string{"123"},
 			val:   "123",
 		},
 
 		"FormTextInput: Required value with data must be accepted": {
-			field: &FormTextInput{
+			field: &FormText{
 				Required: true,
 			},
-			src: "123",
-			dst: "123",
+			src: []string{"123"},
+			dst: []string{"123"},
 			val: "123",
 		},
 
 		"FormTextInput: Required value without data must be rejected": {
-			field: &FormTextInput{
+			field: &FormText{
 				Required: true,
 			},
+			dst: []string{""},
 			val: "",
 			errors: echo.ValidationErrors{
 				MessageConstraintRequired,
@@ -229,20 +196,20 @@ func TestFormComponent_SetValue(t *testing.T) {
 		},
 
 		"FormTextInput: Value matched pattern must be accepted": {
-			field: &FormTextInput{
+			field: &FormText{
 				Pattern: "[a-z]+",
 			},
-			src: "abc",
-			dst: "abc",
+			src: []string{"abc"},
+			dst: []string{"abc"},
 			val: "abc",
 		},
 
 		"FormTextInput: Value don't matched pattern must be rejected": {
-			field: &FormTextInput{
+			field: &FormText{
 				Pattern: "[a-z]+",
 			},
-			src: "123",
-			dst: "123",
+			src: []string{"123"},
+			dst: []string{"123"},
 			val: "123",
 			errors: echo.ValidationErrors{
 				MessageConstraintPattern,
@@ -250,20 +217,20 @@ func TestFormComponent_SetValue(t *testing.T) {
 		},
 
 		"FormTextInput: Value with length smaller than allowed must be accepted": {
-			field: &FormTextInput{
+			field: &FormText{
 				MaxLength: 64,
 			},
-			src: "12345",
-			dst: "12345",
+			src: []string{"12345"},
+			dst: []string{"12345"},
 			val: "12345",
 		},
 
 		"FormTextInput: Too length value must produce error": {
-			field: &FormTextInput{
+			field: &FormText{
 				MaxLength: 3,
 			},
-			src: "12345",
-			dst: "12345",
+			src: []string{"12345"},
+			dst: []string{"12345"},
 			val: "12345",
 			errors: echo.ValidationErrors{
 				&echo.Cause{
@@ -273,68 +240,69 @@ func TestFormComponent_SetValue(t *testing.T) {
 			},
 		},
 
-		"FormTextArea: Default must be accepted": {
-			field: &FormTextArea{},
-			src:   "123",
-			dst:   "123",
+		"FormText: Default must be accepted": {
+			field: &FormText{},
+			src:   []string{"123"},
+			dst:   []string{"123"},
 			val:   "123",
 		},
 
-		"FormTextArea: Required value with data must be accepted": {
-			field: &FormTextArea{
+		"FormText: Required value with data must be accepted": {
+			field: &FormText{
 				Required: true,
 			},
-			src: "123",
-			dst: "123",
+			src: []string{"123"},
+			dst: []string{"123"},
 			val: "123",
 		},
 
-		"FormTextArea: Required value without data must be rejected": {
-			field: &FormTextArea{
+		"FormText: Required value without data must be rejected": {
+			field: &FormText{
 				Required: true,
 			},
+			dst: []string{""},
 			val: "",
 			errors: echo.ValidationErrors{
 				MessageConstraintRequired,
 			},
 		},
 
-		"FormTextArea: Value matched pattern must be accepted": {
-			field: &FormTextArea{
+		"FormText: Value matched pattern must be accepted": {
+			field: &FormText{
 				Pattern: "[a-z]+",
 			},
-			src: "abc",
-			dst: "abc",
+			src: []string{"abc"},
+			dst: []string{"abc"},
 			val: "abc",
 		},
 
-		"FormTextArea: Value don't matched pattern must be rejected": {
-			field: &FormTextArea{
+		"FormText: Value don't matched pattern must be rejected": {
+			field: &FormText{
 				Pattern: "[a-z]+",
 			},
-			src: "123",
-			dst: "123",
+			src: []string{"123"},
+			dst: []string{"123"},
 			val: "123",
 			errors: echo.ValidationErrors{
 				MessageConstraintPattern,
 			},
 		},
 
-		"FormTextArea: Value with length smaller than allowed must be accepted": {
-			field: &FormTextArea{
+		"FormText: Value with length smaller than allowed must be accepted": {
+			field: &FormText{
 				MaxLength: 64,
 			},
-			src: "12345",
-			dst: "12345",
+			src: []string{"12345"},
+			dst: []string{"12345"},
 			val: "12345",
 		},
 
-		"FormTextArea: Too length value must produce error": {
-			field: &FormTextArea{
+		"FormText: Too length value must produce error": {
+			field: &FormText{
 				MaxLength: 3,
 			},
-			src: "12345",
-			dst: "12345",
+			src: []string{"12345"},
+			dst: []string{"12345"},
 			val: "12345",
 			errors: echo.ValidationErrors{
 				&echo.Cause{
@@ -346,8 +314,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 
 		"FormHidden: Default must be accepted": {
 			field: &FormHidden{},
-			src:   "123",
-			dst:   "123",
+			src:   []string{"123"},
+			dst:   []string{"123"},
 			val:   "123",
 		},
 
@@ -355,8 +323,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 			field: &FormHidden{
 				Required: true,
 			},
-			src: "123",
-			dst: "123",
+			src: []string{"123"},
+			dst: []string{"123"},
 			val: "123",
 		},
 
@@ -364,6 +332,7 @@ func TestFormComponent_SetValue(t *testing.T) {
 			field: &FormHidden{
 				Required: true,
 			},
+			dst: []string{""},
 			val: "",
 			errors: echo.ValidationErrors{
 				MessageConstraintRequired,
@@ -374,8 +343,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 			field: &FormHidden{
 				Pattern: "[a-z]+",
 			},
-			src: "abc",
-			dst: "abc",
+			src: []string{"abc"},
+			dst: []string{"abc"},
 			val: "abc",
 		},
 
@@ -383,8 +352,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 			field: &FormHidden{
 				Pattern: "[a-z]+",
 			},
-			src: "123",
-			dst: "123",
+			src: []string{"123"},
+			dst: []string{"123"},
 			val: "123",
 			errors: echo.ValidationErrors{
 				MessageConstraintPattern,
@@ -395,8 +364,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 			field: &FormHidden{
 				MaxLength: 64,
 			},
-			src: "12345",
-			dst: "12345",
+			src: []string{"12345"},
+			dst: []string{"12345"},
 			val: "12345",
 		},
 
@@ -404,8 +373,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 			field: &FormHidden{
 				MaxLength: 3,
 			},
-			src: "12345",
-			dst: "12345",
+			src: []string{"12345"},
+			dst: []string{"12345"},
 			val: "12345",
 			errors: echo.ValidationErrors{
 				&echo.Cause{
@@ -415,25 +384,25 @@ func TestFormComponent_SetValue(t *testing.T) {
 			},
 		},
 
-		"FormSelector: Default": {
-			field: &FormSelector{
+		"FormSelect: Default": {
+			field: &FormSelect{
 				Items: cities,
 			},
-			src: "1",
-			dst: "1",
+			src: []string{"1"},
+			dst: []string{"1"},
 			val: "1",
 		},
-		"FormSelector: Required value with data must be accepted": {
-			field: &FormSelector{
+		"FormSelect: Required value with data must be accepted": {
+			field: &FormSelect{
 				Items:    cities,
 				Required: true,
 			},
-			src: "1",
-			dst: "1",
+			src: []string{"1"},
+			dst: []string{"1"},
 			val: "1",
 		},
-		"FormSelector: Required value without data must be rejected": {
-			field: &FormSelector{
+		"FormSelect: Required value without data must be rejected": {
+			field: &FormSelect{
 				Items:    cities,
 				Required: true,
 			},
@@ -442,84 +411,27 @@ func TestFormComponent_SetValue(t *testing.T) {
 			},
 		},
 
-		"FormCheckBox: On": {
-			field: &FormCheckBox{
-				FormField: FormField{
-					Codec: CheckBoxCodec,
-				},
+		"FormMultiSelect: Normal": {
+			field: &FormMultiSelect{
+				Items: cities,
 			},
-			src: "on",
-			dst: "on",
-			val: true,
-		},
-		"FormCheckBox: Off": {
-			field: &FormCheckBox{
-				FormField: FormField{
-					Codec: CheckBoxCodec,
-				},
-			},
-			src: "off",
-			dst: "off",
-			val: false,
+			src: []string{"1", "100"},
+			dst: []string{"1", "100"},
+			val: []string{"1"},
 		},
 
-		"FormSubmit: Default": {
-			field: &FormSubmit{},
-			val:   "",
-		},
-		/*"FormSubmit: Simple valid value must be accepted": {
-			field: &FormSubmit{
-				Field: echo.Field{
-					Name: "Accept",
-				},
-				Required: true,
-			},
-			src: "accept",
-			dst: "accept",
-			val: "accept",
-		},*/
-		"FormSubmit: Simple invalid value must be rejected": {
-			field: &FormSubmit{
-				FormField: FormField{
-					Name: "Accept",
-				},
-				Required: true,
-			},
-			src: "unknown",
-			errors: echo.ValidationErrors{
-				echo.ValidationErrorInvalidValue,
-			},
-		},
-		"FormSubmit: Complex valid value must be accepted": {
-			field: &FormSubmit{
-				FormField: FormField{
-					Name: "Accept",
-				},
-				Required: true,
-				Items:    cities,
-			},
-			src: "1",
-			dst: "1",
-			val: "1",
-		},
-		"FormSubmit: Complex invalid value must be rejected": {
-			field: &FormSubmit{
-				FormField: FormField{
-					Name: "Accept",
-				},
-				Required: true,
-				Items:    cities,
-			},
-			src: "unknown",
-			errors: echo.ValidationErrors{
-				echo.ValidationErrorInvalidValue,
-			},
+		"FormMultiSelect: without dataset": {
+			field: &FormMultiSelect{},
+			src:   []string{"on", "xxx"},
+			dst:   []string{"on", "xxx"},
+			val:   []string{"on"},
 		},
 	}
 
 	e := echo.New()
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
+			t.Parallel()
 			c := e.NewContext(nil, nil)
 			err := test.field.SetValue(c, test.src)
 			require.NoError(t, err)
@@ -535,7 +447,7 @@ func TestModel_Bind(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	ctx := e.NewContext(req, httptest.NewRecorder())
 
-	username := &FormField{
+	username := &FormText{
 		Name: "Username",
 	}
 
@@ -555,11 +467,11 @@ func TestModel_AssignFrom(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	ctx := e.NewContext(req, httptest.NewRecorder())
 
-	username := &FormField{
+	username := &FormText{
 		Name: "username",
 	}
 
-	region := &FormField{
+	region := &FormText{
 		Name: "region",
 	}
 
@@ -585,11 +497,11 @@ func TestModel_AssignTo(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
 	ctx := e.NewContext(req, httptest.NewRecorder())
 
-	username := &FormField{
+	username := &FormText{
 		Name: "Username",
 	}
 
-	region := &FormField{
+	region := &FormText{
 		Name: "Region",
 	}
 

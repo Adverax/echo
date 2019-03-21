@@ -288,9 +288,7 @@ func TestRenderWidget(t *testing.T) {
 				Action: "google.com",
 				Model: echo.Model{
 					"Submit": &FormSubmit{
-						FormField: FormField{
-							Label: "Submit",
-						},
+						Label: "Submit",
 					},
 				},
 			},
@@ -304,9 +302,7 @@ func TestRenderWidget(t *testing.T) {
 				Models: echo.Models{
 					echo.Model{
 						"Submit": &FormSubmit{
-							FormField: FormField{
-								Label: "Submit",
-							},
+							Label: "Submit",
 						},
 					},
 				},

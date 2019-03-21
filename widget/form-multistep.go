@@ -132,12 +132,10 @@ func (stage *MultiStepBaseStage) Publish(
 
 	if stage.NextBtn != nil {
 		submit := &FormSubmit{
-			FormField: FormField{
-				Name:  "action",
-				Label: stage.NextBtn.Label,
-			},
+			Name:  "action",
+			Label: stage.NextBtn.Label,
 		}
-		submit.SetValue(ctx, "redo")
+		submit.SetValue(ctx, []string{"redo"})
 		model["Next"] = submit
 	}
 
@@ -163,9 +161,7 @@ func (stage *MultiStepStageResource) Model(
 	state *MultiStepState,
 ) (echo.Model, error) {
 	accepted := &FormHidden{
-		FormField: FormField{
-			Name: stage.Name,
-		},
+		Name:     stage.Name,
 		Required: true,
 	}
 

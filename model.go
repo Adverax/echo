@@ -42,17 +42,24 @@ func myLoginHandler(ctx echo.Context) error {
         Password: "Default password,
 	}
 
-	if ctx.Request == post {
-		err := model.Bind(&data, &rec)
-		if err != nil {
-			return err
-		}
+    err := model.AssignFrom(ctx, rec)
+    if err != nil {
+        return err
+    }
 
-		if model.IsValid() {
-            // Record is valid
-			...
-			return nil
-		}
+    err = model.Bind(&data, &rec)
+    if err != nil {
+      return err
+    }
+
+	if model.IsValid() {
+		// Record is valid
+		err := model.AssignTo(ctx, &rec)
+        if err != nil {
+            return err
+        }
+		...
+		return nil
 	}
 
 	// Show form
@@ -87,12 +94,12 @@ type ModelField interface {
 	GetName() string
 	// Get internal representation of value
 	GetVal() interface{}
-	// Set internal representation pf value
+	// Set internal representation of value
 	SetVal(ctx Context, value interface{})
-	// Get external representation pf value
-	GetValue() string
-	// Set external representation pf value
-	SetValue(ctx Context, value string) error
+	// Get external representation of value
+	GetValue() []string
+	// Set external representation of value
+	SetValue(ctx Context, value []string) error
 	// Get flag disabled
 	GetDisabled() bool
 	// Get flag hidden
@@ -194,7 +201,7 @@ func (model Model) BindFrom(
 			name := field.GetName()
 			value, ok := data[name]
 			if ok && len(value) != 0 {
-				err := field.SetValue(ctx, value[0])
+				err := field.SetValue(ctx, value)
 				if err != nil {
 					return err
 				}
@@ -277,7 +284,7 @@ func (model Model) AssignTo(
 
 	rec := reflect.ValueOf(dst).Elem()
 	if rec.Kind() != reflect.Struct {
-		return fmt.Errorf("invalid type of source")
+		return fmt.Errorf("invalid type of destination")
 	}
 
 	for _, item := range model {

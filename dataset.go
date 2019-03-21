@@ -358,3 +358,24 @@ func IsPrimitiveDataSet(
 	_, ok := dataset.(*dataSet)
 	return ok
 }
+
+func DataSetKeys(ctx Context, ds DataSet) ([]string, error) {
+	length, err := ds.Length(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	keys := make([]string, 0, length)
+	err = ds.Enumerate(
+		ctx,
+		func(key string, value string) error {
+			keys = append(keys, key)
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return keys, nil
+}

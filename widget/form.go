@@ -18,14 +18,15 @@
 package widget
 
 import (
-	"github.com/adverax/echo"
-	"github.com/adverax/echo/data"
-	"github.com/adverax/echo/generic"
 	"io"
 	"os"
 	"regexp"
-	"strings"
+	"sort"
 	"unicode/utf8"
+
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/data"
+	"github.com/adverax/echo/generic"
 )
 
 // MultiForm contains list of models.
@@ -134,84 +135,80 @@ func (w *Form) Render(
 
 type FormFieldFilterFunc func(value string) string
 
-type FormField struct {
-	Id          string                // Field identifier
-	Name        string                // Field name
-	Label       interface{}           // Field label
-	Disabled    bool                  // Field disabled
-	Hidden      bool                  // Field is hidden (not rendered)
-	Filter      FormFieldFilterFunc   // Custom filter
-	Codec       echo.Codec            // Field codec (optional)
-	Default     interface{}           // Default value
+type field struct {
 	val         interface{}           // Internal representation of value
-	value       string                // External representation of value
+	value       []string              // External representation of value
 	errors      echo.ValidationErrors // Field errors
 	initialized bool                  // Field is initialized
 }
 
-func (field *FormField) GetName() string {
-	return field.Name
-}
-
-func (field *FormField) GetVal() interface{} {
-	return field.val
-}
-
-func (field *FormField) GetSigned() int64 {
+func (field *field) GetSigned() int64 {
 	res, _ := generic.ConvertToInt64(field.val)
 	return res
 }
 
-func (field *FormField) GetUnsigned() uint64 {
+func (field *field) GetUnsigned() uint64 {
 	res, _ := generic.ConvertToUint64(field.val)
 	return res
 }
 
-func (field *FormField) GetDecimal() float64 {
+func (field *field) GetDecimal() float64 {
 	res, _ := generic.ConvertToFloat64(field.val)
 	return res
 }
 
-func (field *FormField) GetString() string {
+func (field *field) GetString() string {
 	res, _ := generic.ConvertToString(field.val)
 	return res
 }
 
-func (field *FormField) GetBoolean() bool {
+func (field *field) GetBoolean() bool {
 	res, _ := generic.ConvertToBoolean(field.val)
 	return res
 }
 
-// Set internal value of the field
-func (field *FormField) SetVal(ctx echo.Context, value interface{}) {
-	field.val = value
-	field.initialized = true
-	if field.Codec == nil {
-		field.value, _ = generic.ConvertToString(value)
-	} else {
-		field.value, _ = field.Codec.Decode(ctx, value)
-	}
+func (field *field) GetVal() interface{} {
+	return field.val
 }
 
-// Get external value of the field
-func (field *FormField) GetValue() string {
+func (field *field) GetValue() []string {
 	return field.value
 }
 
-// Check external value of the field
-func (field *FormField) SetValue(ctx echo.Context, value string) error {
-	if field.Filter != nil {
-		value = field.Filter(value)
+// Set internal value of the field
+func (field *field) setVal(
+	ctx echo.Context,
+	value interface{},
+	codec echo.Codec,
+) {
+	field.val = value
+	field.initialized = true
+	var val string
+	if codec == nil {
+		val, _ = generic.ConvertToString(value)
+	} else {
+		val, _ = codec.Decode(ctx, value)
 	}
+	field.value = []string{val}
+}
+
+// Set external value of the field.
+// This is base version, that can be override by descendants.
+func (field *field) setValue(
+	ctx echo.Context,
+	value []string,
+	codec echo.Codec,
+) error {
+	aValue := simpleValue(value)
 
 	field.initialized = true
-	field.value = value
-	if field.Codec == nil {
-		field.val = value
+	field.value = []string{aValue}
+	if codec == nil {
+		field.val = aValue
 		return nil
 	}
 
-	val, err := field.Codec.Encode(ctx, value)
+	val, err := codec.Encode(ctx, aValue)
 	if err == nil {
 		field.val = val
 		return nil
@@ -239,55 +236,23 @@ func (field *FormField) SetValue(ctx echo.Context, value string) error {
 	return nil
 }
 
-// Get disabled flag
-func (field *FormField) GetDisabled() bool {
-	return field.Disabled
-}
-
-// Get hidden flag
-func (field *FormField) GetHidden() bool {
-	return field.Hidden
-}
-
-// Append new error
-func (field *FormField) AddError(message echo.ValidationError) {
-	field.errors = append(field.errors, message)
-}
-
-// Get list of field errors
-func (field *FormField) GetErrors() echo.ValidationErrors {
-	return field.errors
-}
-
-// Test for errors
-func (field *FormField) IsValid() bool {
-	return len(field.errors) == 0
-}
-
-// Reset field to initial state
-func (field *FormField) Reset(ctx echo.Context) error {
-	field.errors = nil
-	field.value = ""
-	field.val = nil
-	if !field.initialized {
-		field.SetVal(ctx, field.Default)
-	}
-	return nil
-}
-
-func (field *FormField) render(
+func (field *field) render(
 	ctx echo.Context,
+	id string,
+	name string,
+	label interface{},
+	disabled bool,
 ) (map[string]interface{}, error) {
 	res := make(map[string]interface{}, 16)
-	if field.Id != "" {
-		res["Id"] = field.Id
+	if id != "" {
+		res["Id"] = id
 	}
-	if field.Name != "" {
-		res["Name"] = field.Name
+	if name != "" {
+		res["Name"] = name
 	}
 
-	if field.Label != nil {
-		label, err := RenderWidget(ctx, field.Label)
+	if label != nil {
+		label, err := RenderWidget(ctx, label)
 		if err != nil {
 			return nil, err
 		}
@@ -296,7 +261,7 @@ func (field *FormField) render(
 		}
 	}
 
-	if field.Disabled {
+	if disabled {
 		res["Disabled"] = true
 	}
 
@@ -311,7 +276,30 @@ func (field *FormField) render(
 	return res, nil
 }
 
-func (field *FormField) validateRequired(value string, required bool) bool {
+// Append a new error
+func (field *field) AddError(message echo.ValidationError) {
+	field.errors = append(field.errors, message)
+}
+
+// Get list of field errors
+func (field *field) GetErrors() echo.ValidationErrors {
+	return field.errors
+}
+
+// Test for errors
+func (field *field) IsValid() bool {
+	return len(field.errors) == 0
+}
+
+// Reset field to initial state
+func (field *field) reset() {
+	field.errors = nil
+	field.value = nil
+	field.val = nil
+	field.initialized = false
+}
+
+func (field *field) validateRequired(value string, required bool) bool {
 	if required && value == "" {
 		field.AddError(MessageConstraintRequired)
 		return false
@@ -319,7 +307,7 @@ func (field *FormField) validateRequired(value string, required bool) bool {
 	return true
 }
 
-func (field *FormField) validatePattern(value, pattern string, required bool) bool {
+func (field *field) validatePattern(value, pattern string, required bool) bool {
 	if (required || value != "") && pattern != "" {
 		matched, _ := regexp.MatchString(pattern, value)
 		if !matched {
@@ -330,7 +318,7 @@ func (field *FormField) validatePattern(value, pattern string, required bool) bo
 	return true
 }
 
-func (field *FormField) validateMaxLength(value string, maxLength int) bool {
+func (field *field) validateMaxLength(value string, maxLength int) bool {
 	if maxLength != 0 && utf8.RuneCountInString(value) > maxLength {
 		field.AddError(
 			&echo.Cause{
@@ -343,88 +331,74 @@ func (field *FormField) validateMaxLength(value string, maxLength int) bool {
 	return true
 }
 
-// FormTextInput represent html entities: <input type="text"> or <input type="password">.
-type FormTextInput struct {
-	FormField
-	Required    bool        // Field is required
-	Pattern     string      // Field pattern
-	Placeholder interface{} // Field placeholder
-	MaxLength   int         // Max length of value
+// FormText represent html entity <textarea> or <input type="text"> or <input type="password">.
+type FormText struct {
+	field
+	Id          string              // Field identifier
+	Name        string              // Field name
+	Label       interface{}         // Field label
+	Disabled    bool                // Field disabled
+	Hidden      bool                // Field is hidden (not rendered)
+	Filter      FormFieldFilterFunc // Custom filter
+	Codec       echo.Codec          // Field codec (optional)
+	Default     interface{}         // Default value
+	Required    bool                // Field is required
+	Pattern     string              // Field pattern
+	Placeholder interface{}         // Field placeholder
+	MaxLength   int                 // Field max length
+	ReadOnly    bool                // Field is read only
+	Rows        int                 // Max count of visible rows
 }
 
-func (w *FormTextInput) Render(
-	ctx echo.Context,
-) (interface{}, error) {
-	if w.Hidden {
-		return nil, nil
-	}
-
-	res, err := w.FormField.render(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if w.Required {
-		res["Required"] = true
-	}
-
-	if w.Pattern != "" {
-		res["Pattern"] = w.Pattern
-	}
-
-	if w.Placeholder != nil {
-		placeholder, err := RenderWidget(ctx, w.Placeholder)
-		if err != nil {
-			return nil, err
-		}
-		res["Placeholder"] = placeholder
-	}
-
-	if w.MaxLength != 0 {
-		res["MaxLen"] = w.MaxLength
-	}
-
-	value := w.GetValue()
-	if value != "" {
-		res["Value"] = value
-	}
-
-	return res, nil
+func (w *FormText) GetName() string {
+	return w.Name
 }
 
-func (w *FormTextInput) SetValue(
+func (w *FormText) GetDisabled() bool {
+	return w.Disabled
+}
+
+func (w *FormText) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormText) SetVal(ctx echo.Context, value interface{}) {
+	w.field.setVal(ctx, value, w.Codec)
+}
+
+func (w *FormText) SetValue(
 	ctx echo.Context,
-	value string,
+	value []string,
 ) error {
-	err := w.FormField.SetValue(ctx, value)
+	value = filterValue(w.Filter, value)
+	err := w.setValue(ctx, value, w.Codec)
 	if err != nil {
 		return err
 	}
-	w.FormField.validateRequired(value, w.Required)
-	w.FormField.validatePattern(value, w.Pattern, w.Required)
-	w.FormField.validateMaxLength(value, w.MaxLength)
+
+	aValue := simpleValue(value)
+	w.validateRequired(aValue, w.Required)
+	w.validatePattern(aValue, w.Pattern, w.Required)
+	w.validateMaxLength(aValue, w.MaxLength)
 	return nil
 }
 
-// FormTextArea represent html entity <textarea>.
-type FormTextArea struct {
-	FormField
-	Required    bool        // Field is required
-	Pattern     string      // Field pattern
-	Placeholder interface{} // Field placeholder
-	MaxLength   int         // Field max length
-	ReadOnly    bool        // Field is read only
-	Rows        int         // Max count of visible rows
+func (w *FormText) Reset(ctx echo.Context) error {
+	w.field.reset()
+	if w.Default != nil {
+		w.SetVal(ctx, w.Default)
+	}
+	return nil
 }
 
-func (w *FormTextArea) Render(
+func (w *FormText) Render(
 	ctx echo.Context,
 ) (interface{}, error) {
 	if w.Hidden {
 		return nil, nil
 	}
 
-	res, err := w.FormField.render(ctx)
+	res, err := w.field.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
 		return nil, err
 	}
@@ -458,33 +432,285 @@ func (w *FormTextArea) Render(
 	}
 
 	value := w.GetValue()
-	if value != "" {
-		res["Value"] = value
+	if len(value) != 0 {
+		res["Value"] = value[0]
 	}
 
 	return res, nil
 }
 
-func (w *FormTextArea) SetValue(
+// FormSelect represent html entity <select> or other same widget.
+// Notice: Field Codec must be ignored (internal and external representations are same).
+type FormSelect struct {
+	field
+	Id       string              // Field identifier
+	Name     string              // Field name
+	Label    interface{}         // Field label
+	Disabled bool                // Field disabled
+	Hidden   bool                // Field is hidden (not rendered)
+	Filter   FormFieldFilterFunc // Custom filter
+	Default  interface{}         // Default value
+	Required bool                // Value is required
+	Items    echo.DataSet        // Field items
+}
+
+func (w *FormSelect) GetName() string {
+	return w.Name
+}
+
+func (w *FormSelect) GetDisabled() bool {
+	return w.Disabled
+}
+
+func (w *FormSelect) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormSelect) SetVal(ctx echo.Context, value interface{}) {
+	w.field.setVal(ctx, value, nil)
+}
+
+func (w *FormSelect) SetValue(
 	ctx echo.Context,
-	value string,
+	value []string,
 ) error {
-	err := w.FormField.SetValue(ctx, value)
+	aVal, aValue := w.val, w.value
+	defer func() {
+		if !w.IsValid() {
+			w.val, w.value = aVal, aValue
+		}
+	}()
+
+	value = filterValue(w.Filter, value)
+	err := w.setValue(ctx, value, nil)
 	if err != nil {
 		return err
 	}
-	w.FormField.validateRequired(value, w.Required)
-	w.FormField.validatePattern(value, w.Pattern, w.Required)
-	w.FormField.validateMaxLength(value, w.MaxLength)
+
+	v := simpleValue(value)
+	if w.validateRequired(v, w.Required) {
+		_, err := w.Items.Decode(ctx, w.val)
+		if err != nil {
+			if err != data.ErrNoMatch {
+				return err
+			}
+			w.AddError(echo.ValidationErrorInvalidValue)
+		}
+	}
+
 	return nil
 }
 
+func (w *FormSelect) Render(
+	ctx echo.Context,
+) (interface{}, error) {
+	if w.Hidden {
+		return nil, nil
+	}
+
+	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
+	if err != nil {
+		return nil, err
+	}
+
+	if w.Required {
+		res["Required"] = true
+	}
+
+	selected := map[string]bool{
+		w.GetString(): true,
+	}
+	items, err := RenderDataSet(ctx, w.Items, selected)
+	if err != nil {
+		return nil, err
+	}
+	if items != nil {
+		res["Items"] = items
+	}
+
+	if !w.Required {
+		label, err := ctx.Echo().Locale.Message(ctx, uint32(MessageSelectorEmpty))
+		if err != nil {
+			return nil, err
+		}
+		res["Empty"] = label
+	}
+
+	return res, nil
+}
+
+func (w *FormSelect) Reset(ctx echo.Context) error {
+	w.field.reset()
+	if w.Default != nil {
+		w.SetVal(ctx, w.Default)
+	}
+	return nil
+}
+
+// FormMultiSelect represent html entity <input type="checkbox">.
+// Example:
+//   subscribe := &widget.FormMultiSelect{
+//       FormField: widget.FormField{
+//           Name: "Subscribe",
+//       },
+//       Items: ...,
+//   }
+type FormMultiSelect struct {
+	field
+	Id          string              // Field identifier
+	Name        string              // Field name
+	Label       interface{}         // Field label
+	Disabled    bool                // Field disabled
+	Hidden      bool                // Field is hidden (not rendered)
+	Filter      FormFieldFilterFunc // Custom filter
+	Default     interface{}         // Default value
+	Items       echo.DataSet        // List labels for allowed values
+	Placeholder interface{}         // Placeholder text
+}
+
+func (w *FormMultiSelect) GetName() string {
+	return w.Name
+}
+
+func (w *FormMultiSelect) GetDisabled() bool {
+	return w.Disabled
+}
+
+func (w *FormMultiSelect) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormMultiSelect) SetVal(ctx echo.Context, value interface{}) {
+	w.initialized = true
+	if v, ok := value.([]string); ok {
+		w.value = v
+	} else {
+		v, _ := generic.ConvertToString(value)
+		w.value = []string{v}
+	}
+	w.val = w.value
+}
+
+func (w *FormMultiSelect) SetValue(
+	ctx echo.Context,
+	value []string,
+) error {
+	value = filterValue(w.Filter, value)
+
+	w.initialized = true
+	w.value = value
+
+	keys, err := echo.DataSetKeys(ctx, w.getItems())
+	if err != nil {
+		return err
+	}
+
+	w.val = intersect(value, keys)
+	return nil
+}
+
+func (w *FormMultiSelect) Render(
+	ctx echo.Context,
+) (interface{}, error) {
+	if w.Hidden {
+		return nil, nil
+	}
+
+	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
+	if err != nil {
+		return nil, err
+	}
+
+	vs := w.GetValue()
+	selected := make(map[string]bool, len(vs))
+	for _, v := range vs {
+		selected[v] = true
+	}
+	items, err := RenderDataSet(ctx, w.Items, selected)
+	if err != nil {
+		return nil, err
+	}
+	if items != nil {
+		res["Items"] = items
+	} else {
+		value := w.value
+		if len(value) != 0 {
+			res["Value"] = value[0]
+		}
+	}
+
+	if w.Placeholder != nil {
+		placeholder, err := RenderWidget(ctx, w.Placeholder)
+		if err != nil {
+			return nil, err
+		}
+		res["Placeholder"] = placeholder
+	}
+
+	return res, nil
+}
+
+func (w *FormMultiSelect) Reset(ctx echo.Context) error {
+	w.field.reset()
+	if w.Default != nil {
+		w.SetVal(ctx, w.Default)
+	}
+	return nil
+}
+
+func (w *FormMultiSelect) getItems() echo.DataSet {
+	if w.Items != nil {
+		return w.Items
+	}
+
+	return defaultMultiSelectItems
+}
+
+// FormSubmit represents action Submit
+type FormSubmit = FormSelect
+
 // FormHidden represent html entity <input type="hidden">.
 type FormHidden struct {
-	FormField
-	Required  bool   // Field is required
-	Pattern   string // Field pattern
-	MaxLength int    // Field max length
+	field
+	Id        string      // Field identifier
+	Name      string      // Field name
+	Hidden    bool        // Field is hidden (not rendered)
+	Default   interface{} // Default value
+	Required  bool        // Field is required
+	Pattern   string      // Field pattern
+	MaxLength int         // Field max length
+}
+
+func (w *FormHidden) GetName() string {
+	return w.Name
+}
+
+func (w *FormHidden) GetDisabled() bool {
+	return false
+}
+
+func (w *FormHidden) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormHidden) SetVal(ctx echo.Context, value interface{}) {
+	w.field.setVal(ctx, value, nil)
+}
+
+func (w *FormHidden) SetValue(
+	ctx echo.Context,
+	value []string,
+) error {
+	err := w.field.setValue(ctx, value, nil)
+	if err != nil {
+		return err
+	}
+
+	aValue := simpleValue(value)
+	w.validateRequired(aValue, w.Required)
+	w.validatePattern(aValue, w.Pattern, w.Required)
+	w.validateMaxLength(aValue, w.MaxLength)
+	return nil
 }
 
 func (w *FormHidden) Render(
@@ -494,43 +720,78 @@ func (w *FormHidden) Render(
 		return nil, nil
 	}
 
-	res, err := w.FormField.render(ctx)
+	res, err := w.render(ctx, w.Id, w.Name, nil, false)
 	if err != nil {
 		return nil, err
 	}
-	res["Value"] = w.GetValue()
+
+	value := w.GetValue()
+	if len(value) != 0 {
+		res["Value"] = value[0]
+	}
 
 	return res, nil
 }
 
-func (w *FormHidden) SetValue(
-	ctx echo.Context,
-	value string,
-) error {
-	err := w.FormField.SetValue(ctx, value)
-	if err != nil {
-		return err
+func (w *FormHidden) Reset(ctx echo.Context) error {
+	w.field.reset()
+	if w.Default != nil {
+		w.SetVal(ctx, w.Default)
 	}
-	w.FormField.validateRequired(value, w.Required)
-	w.FormField.validatePattern(value, w.Pattern, w.Required)
-	w.FormField.validateMaxLength(value, w.MaxLength)
 	return nil
 }
 
-// FormFielInput represent html entity <input type="file">.
-type FormFileInput struct {
-	FormField
-	Accept string // Accept filter
+// FormFile represent html entity <input type="file">.
+type FormFile struct {
+	field
+	Id       string      // Field identifier
+	Name     string      // Field name
+	Label    interface{} // Field label
+	Disabled bool        // Field disabled
+	Hidden   bool        // Field is hidden (not rendered)
+	Accept   string      // Accept filter
+	Required bool        // Field is required
 }
 
-func (w *FormFileInput) Render(
+func (w *FormFile) GetName() string {
+	return w.Name
+}
+
+func (w *FormFile) GetDisabled() bool {
+	return w.Disabled
+}
+
+func (w *FormFile) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormFile) SetVal(ctx echo.Context, value interface{}) {
+	w.field.setVal(ctx, value, nil)
+}
+
+func (w *FormFile) SetValue(
+	ctx echo.Context,
+	value []string,
+) error {
+	err := w.field.setValue(ctx, value, nil)
+	if err != nil {
+		return err
+	}
+
+	aValue := simpleValue(value)
+	w.validateRequired(aValue, w.Required)
+	// todo: validate accept filter
+	return nil
+}
+
+func (w *FormFile) Render(
 	ctx echo.Context,
 ) (interface{}, error) {
 	if w.Hidden {
 		return nil, nil
 	}
 
-	res, err := w.FormField.render(ctx)
+	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
 		return nil, err
 	}
@@ -542,15 +803,17 @@ func (w *FormFileInput) Render(
 	return res, nil
 }
 
-func (w *FormFileInput) Upload(
+func (w *FormFile) Upload(
 	ctx echo.Context,
 	path string, // file path for store
 	name string, // file name for store
 ) (fileName string, err error) {
-	r := ctx.Request()
-	r.ParseMultipartForm(32 << 20)
+	_, err = ctx.MultipartForm()
+	if err != nil {
+		return "", err
+	}
 
-	file, handler, err := r.FormFile(w.Name)
+	file, handler, err := ctx.Request().FormFile(w.Name)
 	if err != nil {
 		return "", err
 	}
@@ -575,296 +838,71 @@ func (w *FormFileInput) Upload(
 	return fileName, nil
 }
 
-// FormSelector represent html entity <select> or other same widget.
-// Notice: Field Codec must be ignored (internal and external representations are same).
-type FormSelector struct {
-	FormField
-	Required bool         // Value is required
-	Items    echo.DataSet // Field items
-}
-
-func (w *FormSelector) Render(
-	ctx echo.Context,
-) (interface{}, error) {
-	if w.Hidden {
-		return nil, nil
-	}
-
-	res, err := w.FormField.render(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	if w.Required {
-		res["Required"] = true
-	}
-
-	options, err := w.renderItems(ctx, w.FormField.GetString())
-	if err != nil {
-		return nil, err
-	}
-
-	if !w.Required {
-		label, err := ctx.Echo().Locale.Message(ctx, uint32(MessageSelectorEmpty))
-		if err != nil {
-			return nil, err
-		}
-		options = append(
-			[]interface{}{
-				map[string]interface{}{
-					"Value": "",
-					"Label": label,
-				},
-			},
-			options...,
-		)
-	}
-
-	res["Items"] = options
-
-	return res, nil
-}
-
-func (w *FormSelector) SetValue(
-	ctx echo.Context,
-	value string,
-) error {
-	aVal, aValue := w.val, w.value
-	defer func() {
-		if !w.IsValid() {
-			w.val, w.value = aVal, aValue
-		}
-	}()
-
-	err := w.FormField.SetValue(ctx, value)
-	if err != nil {
-		return err
-	}
-
-	if w.FormField.validateRequired(value, w.Required) {
-		_, err := w.Items.Decode(ctx, w.value)
-		if err != nil {
-			if err != data.ErrNoMatch {
-				return err
-			}
-			w.AddError(echo.ValidationErrorInvalidValue)
-		}
-	}
-
+func (w *FormFile) Reset(ctx echo.Context) error {
+	w.field.reset()
 	return nil
 }
 
-func (w *FormSelector) renderItems(
-	ctx echo.Context,
-	selected string,
-) ([]interface{}, error) {
-	items, err := w.Items.DataSet(ctx)
-	if err != nil {
-		return nil, err
-	}
-	length, err := items.Length(ctx)
-	if err != nil {
-		return nil, err
-	}
-	rows := make([]interface{}, 0, length)
-	err = items.Enumerate(
-		ctx,
-		func(key, value string) error {
-			row := make(map[string]interface{}, 4)
-			row["Value"] = key
-			row["Label"] = value
-			if key == selected {
-				row["Selected"] = true
-			}
-			rows = append(rows, row)
-			return nil
-		},
-	)
-	if err != nil {
-		return nil, err
+func simpleValue(value []string) string {
+	if len(value) == 0 {
+		return ""
 	}
 
-	return rows, nil
+	return value[0]
 }
 
-// FormCheckBox represent html entity <input type="checkbox">.
-// Example:
-//   subscribe := &widget.FormCheckBox{
-//       Field: echo.Field{
-//           Name: "Subscribe",
-//           Codec: widget.CheckBoxCodec,
-//       },
-//   }
-type FormCheckBox struct {
-	FormField
-	Placeholder interface{} // Placeholder text
-}
-
-func (w *FormCheckBox) Render(
-	ctx echo.Context,
-) (interface{}, error) {
-	if w.Hidden {
-		return nil, nil
-	}
-
-	res, err := w.FormField.render(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	value := w.GetValue()
-	if value != "" && value != "0" {
-		res["Checked"] = true
-	}
-
-	if w.Placeholder != nil {
-		placeholder, err := RenderWidget(ctx, w.Placeholder)
-		if err != nil {
-			return nil, err
-		}
-		res["Placeholder"] = placeholder
-	}
-
-	return res, nil
-}
-
-func (w *FormCheckBox) SetValue(
-	ctx echo.Context,
-	value string,
-) error {
-	if value == "" {
-		value = "off"
-	}
-	err := w.FormField.SetValue(ctx, value)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-// FormSubmit represents action Submit
-type FormSubmit struct {
-	FormField
-	Required bool         // Value is required
-	Items    echo.DataSet // Optional set of values
-}
-
-func (w *FormSubmit) Render(
-	ctx echo.Context,
-) (interface{}, error) {
-	if w.Hidden {
-		return nil, nil
-	}
-
-	if w.Items == nil {
-		// Simple version
-		res, err := w.FormField.render(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		if w.value != "" {
-			res["Value"] = w.value
-		}
-
-		return res, nil
-	}
-
-	// Complex version
-	items, err := w.Items.DataSet(ctx)
-	if err != nil {
-		return nil, err
-	}
-	length, err := w.Items.Length(ctx)
-	if err != nil {
-		return nil, err
-	}
-	res := make(map[string]interface{}, length)
-	err = items.Enumerate(
-		ctx,
-		func(key, value string) error {
-			btn, err := w.FormField.render(ctx)
-			if err != nil {
-				return err
-			}
-			btn["Value"] = key
-			btn["Label"] = value
-			res[key] = btn
-			return nil
-		},
-	)
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
-
-func (w *FormSubmit) SetValue(
-	ctx echo.Context,
-	value string,
-) error {
-	aVal, aValue := w.val, w.value
-	defer func() {
-		if !w.IsValid() {
-			w.val, w.value = aVal, aValue
-		}
-	}()
-
-	keeper := w.GetValue()
-
-	err := w.FormField.SetValue(ctx, value)
-	if err != nil {
-		return err
-	}
-
-	if w.FormField.validateRequired(value, w.Required) {
-		if w.Items != nil {
-			_, err := w.Items.Decode(ctx, w.value)
-			if err != nil {
-				if err != data.ErrNoMatch {
-					return err
-				}
-				w.AddError(echo.ValidationErrorInvalidValue)
-			}
-		} else if w.val != keeper {
-			w.AddError(echo.ValidationErrorInvalidValue)
+func filterValue(filter FormFieldFilterFunc, value []string) []string {
+	if filter != nil {
+		for i, val := range value {
+			value[i] = filter(val)
 		}
 	}
 
-	return nil
+	return value
 }
 
-// checkBoxCodec is auxiliary helper for handle html checkbox data.
-type checkBoxCodec struct{}
+func intersect(as, bs []string) []string {
+	sort.Strings(as)
+	sort.Strings(bs)
 
-func (codec *checkBoxCodec) Encode(
-	ctx echo.Context,
-	value string,
-) (interface{}, error) {
-	value = strings.ToLower(value)
-	val := value == "1" || value == "true" || value == "yes" || value == "on"
-	return val, nil
-}
-
-func (codec *checkBoxCodec) Decode(
-	ctx echo.Context,
-	value interface{},
-) (string, error) {
-	val, ok := generic.ConvertToBoolean(value)
-	if !ok {
-		val = false
+	la := len(as)
+	lb := len(bs)
+	var lc int
+	if la > lb {
+		lc = lb
+	} else {
+		lc = la
 	}
-	if val {
-		return "on", nil
+	if lc == 0 {
+		return nil
 	}
-	return "off", nil
+
+	a := 0
+	b := 0
+	cs := make([]string, 0, lc)
+	for a < la && b < lb {
+		if as[a] < bs[b] {
+			a++
+		} else if as[a] > bs[b] {
+			b++
+		} else {
+			cs = append(cs, as[a])
+			a++
+			b++
+		}
+	}
+
+	if len(cs) == 0 {
+		return nil
+	}
+
+	return cs
 }
 
-func (codec *checkBoxCodec) IsEmpty(value interface{}) bool {
-	return false
-}
-
-var (
-	CheckBoxCodec echo.Codec = &checkBoxCodec{}
+var defaultMultiSelectItems = echo.NewDataSet(
+	map[string]string{
+		"on":  "on",
+		"off": "off",
+	},
+	false,
 )

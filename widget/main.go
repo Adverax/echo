@@ -560,6 +560,46 @@ func RenderLink(ctx echo.Context, v interface{}) (string, error) {
 	}
 }
 
+func RenderDataSet(
+	ctx echo.Context,
+	dataset echo.DataSet,
+	selected map[string]bool,
+) ([]interface{}, error) {
+	if dataset == nil {
+		return nil, nil
+	}
+
+	items, err := dataset.DataSet(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	length, err := items.Length(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	rows := make([]interface{}, 0, length)
+	err = items.Enumerate(
+		ctx,
+		func(key, value string) error {
+			row := make(map[string]interface{}, 4)
+			row["Value"] = key
+			row["Label"] = value
+			if _, has := selected[key]; has {
+				row["Selected"] = true
+			}
+			rows = append(rows, row)
+			return nil
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return rows, nil
+}
+
 func FormatMessage(
 	ctx echo.Context,
 	message interface{},
@@ -612,7 +652,10 @@ type Mux interface {
 	Any(path string, handler echo.HandlerFunc, middleware ...echo.MiddlewareFunc) []*echo.Route
 }
 
-var TimeInfinity int64 = 0x7fffffffffffffff
+var (
+	TimeInfinity  int64 = 0x7fffffffffffffff
+	emptySelected       = make(map[string]bool)
+)
 
 func makeTimeout(target int64) time.Duration {
 	return time.Unix(target, 0).Sub(time.Now())

@@ -24,10 +24,8 @@ func (stage *stageBank) Model(
 	ctx echo.Context,
 	state *MultiStepState,
 ) (echo.Model, error) {
-	name := &FormTextInput{
-		FormField: FormField{
-			Name: "name",
-		},
+	name := &FormText{
+		Name: "name",
 	}
 
 	return echo.Model{
@@ -52,11 +50,9 @@ func (stage *stageAmount) Model(
 	ctx echo.Context,
 	state *MultiStepState,
 ) (echo.Model, error) {
-	amount := &FormTextInput{
-		FormField: FormField{
-			Name:  "amount",
-			Codec: echo.UnsignedCodec,
-		},
+	amount := &FormText{
+		Name:  "amount",
+		Codec: echo.UnsignedCodec,
 	}
 
 	return echo.Model{
