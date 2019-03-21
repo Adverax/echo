@@ -153,7 +153,7 @@ func TestMultiStep(t *testing.T) {
 	err := handler(ctx)
 	assert.NoError(t, err)
 	require.Equal(t, http.StatusSeeOther, rec.Code)
-	path := rec.HeaderMap["Location"][0]
+	path := rec.Result().Header["Location"][0]
 
 	// Bank stage
 	req = httptest.NewRequest(http.MethodGet, path, nil)

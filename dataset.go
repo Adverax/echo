@@ -63,7 +63,7 @@ func (datasets DataSets) DataSet(ctx Context) (DataSet, error) {
 	return nil, data.ErrNoMatch
 }
 
-func (datasets DataSets) Enumerate(ctx Context, action DataSetConsumer) error {
+/*func (datasets DataSets) Enumerate(ctx Context, action DataSetConsumer) error {
 	ds, err := datasets.DataSet(ctx)
 	if err != nil {
 		return err
@@ -97,7 +97,7 @@ func (datasets DataSets) Length(ctx Context) (int, error) {
 	}
 
 	return ds.Length(ctx)
-}
+}*/
 
 // DataSet provider
 type DataSetProvider interface {

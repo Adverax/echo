@@ -134,8 +134,12 @@ func (stage *MultiStepBaseStage) Publish(
 		submit := &FormSubmit{
 			Name:  "action",
 			Label: stage.NextBtn.Label,
+			Items: redoDataSet,
 		}
-		submit.SetValue(ctx, []string{"redo"})
+		err := submit.SetValue(ctx, []string{"redo"})
+		if err != nil {
+			return err
+		}
 		model["Next"] = submit
 	}
 
@@ -454,3 +458,10 @@ func AddMultiStepHandler(
 	// Start multistep form
 	mux.GET("/", handler)
 }
+
+var redoDataSet = echo.NewDataSet(
+	map[string]string{
+		"redo": "redo",
+	},
+	false,
+)

@@ -550,9 +550,7 @@ func (w *FormSelect) Reset(ctx echo.Context) error {
 // FormMultiSelect represent html entity <input type="checkbox">.
 // Example:
 //   subscribe := &widget.FormMultiSelect{
-//       FormField: widget.FormField{
-//           Name: "Subscribe",
-//       },
+//       Name: "Subscribe",
 //       Items: ...,
 //   }
 type FormMultiSelect struct {
@@ -667,7 +665,103 @@ func (w *FormMultiSelect) getItems() echo.DataSet {
 }
 
 // FormSubmit represents action Submit
-type FormSubmit = FormSelect
+type FormSubmit struct {
+	field
+	Id       string              // Field identifier
+	Name     string              // Field name
+	Label    interface{}         // Field label
+	Disabled bool                // Field disabled
+	Hidden   bool                // Field is hidden (not rendered)
+	Filter   FormFieldFilterFunc // Custom filter
+	Default  interface{}         // Default value
+	Required bool                // Value is required
+	Items    echo.DataSet        // Field items
+}
+
+func (w *FormSubmit) GetName() string {
+	return w.Name
+}
+
+func (w *FormSubmit) GetDisabled() bool {
+	return w.Disabled
+}
+
+func (w *FormSubmit) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormSubmit) SetVal(ctx echo.Context, value interface{}) {
+	w.field.setVal(ctx, value, nil)
+}
+
+func (w *FormSubmit) SetValue(
+	ctx echo.Context,
+	value []string,
+) error {
+	aVal, aValue := w.val, w.value
+	defer func() {
+		if !w.IsValid() {
+			w.val, w.value = aVal, aValue
+		}
+	}()
+
+	value = filterValue(w.Filter, value)
+	err := w.setValue(ctx, value, nil)
+	if err != nil {
+		return err
+	}
+
+	v := simpleValue(value)
+	if w.validateRequired(v, w.Required) {
+		_, err := w.Items.Decode(ctx, w.val)
+		if err != nil {
+			if err != data.ErrNoMatch {
+				return err
+			}
+			w.AddError(echo.ValidationErrorInvalidValue)
+		}
+	}
+
+	return nil
+}
+
+func (w *FormSubmit) Render(
+	ctx echo.Context,
+) (interface{}, error) {
+	if w.Hidden {
+		return nil, nil
+	}
+
+	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
+	if err != nil {
+		return nil, err
+	}
+
+	if w.Required {
+		res["Required"] = true
+	}
+
+	Submited := map[string]bool{
+		w.GetString(): true,
+	}
+	items, err := RenderDataSet(ctx, w.Items, Submited)
+	if err != nil {
+		return nil, err
+	}
+	if items != nil {
+		res["Items"] = items
+	}
+
+	return res, nil
+}
+
+func (w *FormSubmit) Reset(ctx echo.Context) error {
+	w.field.reset()
+	if w.Default != nil {
+		w.SetVal(ctx, w.Default)
+	}
+	return nil
+}
 
 // FormHidden represent html entity <input type="hidden">.
 type FormHidden struct {
