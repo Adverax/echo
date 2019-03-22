@@ -36,7 +36,7 @@ func TestText_Encode(t *testing.T) {
 	tests := map[string]Test{
 		"The value matched custom validator's must be accepted": {
 			codec: Text{
-				Validator: ValidatorFuncText(
+				Validator: ValidatorTextFunc(
 					func(ctx Context, value string) error {
 						return nil
 					},
@@ -47,7 +47,7 @@ func TestText_Encode(t *testing.T) {
 		},
 		"The value don't matched custom validator's must be rejected": {
 			codec: Text{
-				Validator: ValidatorFuncText(
+				Validator: ValidatorTextFunc(
 					func(ctx Context, value string) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,
@@ -113,7 +113,7 @@ func TestSigned_Encode(t *testing.T) {
 		},
 		"The value matched custom validator's must be accepted": {
 			codec: Signed{
-				Validator: ValidatorFuncSigned(
+				Validator: ValidatorSignedFunc(
 					func(ctx Context, value int64) error {
 						return nil
 					},
@@ -124,7 +124,7 @@ func TestSigned_Encode(t *testing.T) {
 		},
 		"The value don't matched custom validator's must be rejected": {
 			codec: Signed{
-				Validator: ValidatorFuncSigned(
+				Validator: ValidatorSignedFunc(
 					func(ctx Context, value int64) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,
@@ -190,7 +190,7 @@ func TestUnsigned_Encode(t *testing.T) {
 		},
 		"The value matched custom validator's must be accepted": {
 			codec: Unsigned{
-				Validator: ValidatorFuncUnsigned(
+				Validator: ValidatorUnsignedFunc(
 					func(ctx Context, value uint64) error {
 						return nil
 					},
@@ -201,7 +201,7 @@ func TestUnsigned_Encode(t *testing.T) {
 		},
 		"The value don't matched custom validator's must be rejected": {
 			codec: Unsigned{
-				Validator: ValidatorFuncUnsigned(
+				Validator: ValidatorUnsignedFunc(
 					func(ctx Context, value uint64) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,
@@ -267,7 +267,7 @@ func TestDecimal_Encode(t *testing.T) {
 		},
 		"The value matched custom validator's must be accepted": {
 			codec: Decimal{
-				Validator: ValidatorFuncDecimal(
+				Validator: ValidatorDecimalFunc(
 					func(ctx Context, value float64) error {
 						return nil
 					},
@@ -278,7 +278,7 @@ func TestDecimal_Encode(t *testing.T) {
 		},
 		"The value don't matched custom validator's must be rejected": {
 			codec: Decimal{
-				Validator: ValidatorFuncDecimal(
+				Validator: ValidatorDecimalFunc(
 					func(ctx Context, value float64) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,

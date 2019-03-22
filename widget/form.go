@@ -370,6 +370,10 @@ func (w *FormText) SetValue(
 	ctx echo.Context,
 	value []string,
 ) error {
+	if w.ReadOnly {
+		return nil
+	}
+
 	value = filterValue(w.Filter, value)
 	err := w.setValue(ctx, value, w.Codec)
 	if err != nil {

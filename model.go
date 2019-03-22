@@ -42,7 +42,7 @@ func myLoginHandler(ctx echo.Context) error {
         Password: "Default password,
 	}
 
-    err := model.AssignFrom(ctx, rec)
+    err := model.AssignFrom(ctx, rec, nil)
     if err != nil {
         return err
     }
@@ -77,6 +77,18 @@ func (fn MapperFunc) Execute(name string) (string, bool) {
 	return fn(name)
 }
 
+type ListMapper []string
+
+func (mapper ListMapper) Execute(name string) (string, bool) {
+	name = strings.Title(name)
+	for _, val := range mapper {
+		if val == name {
+			return name, true
+		}
+	}
+	return "", false
+}
+
 type DictMapper map[string]string
 
 func (mapper DictMapper) Execute(name string) (string, bool) {
@@ -100,6 +112,16 @@ type ModelField interface {
 	GetValue() []string
 	// Set external representation of value
 	SetValue(ctx Context, value []string) error
+	// Get internal data as signed value
+	GetSigned() int64
+	// Get internal data as unsigned value
+	GetUnsigned() uint64
+	// Get internal data as decimal value
+	GetDecimal() float64
+	// Get internal data as string value
+	GetString() string
+	// Get internal data as boolean value
+	GetBoolean() bool
 	// Get flag disabled
 	GetDisabled() bool
 	// Get flag hidden
@@ -125,7 +147,6 @@ func (model Model) Clone() Model {
 // Bind works with not structured data only.
 func (model Model) Bind(
 	ctx Context,
-	validators ...ValidatorFunc,
 ) error {
 	req := ctx.Request()
 
@@ -175,7 +196,7 @@ func (model Model) Bind(
 		return ErrUnsupportedMediaType
 	}
 
-	if err := model.BindFrom(ctx, params, validators...); err != nil {
+	if err := model.BindFrom(ctx, params); err != nil {
 		return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 	}
 
@@ -185,7 +206,6 @@ func (model Model) Bind(
 func (model Model) BindFrom(
 	ctx Context,
 	data map[string][]string,
-	validators ...ValidatorFunc,
 ) error {
 	for _, item := range model {
 		if field, ok := item.(ModelField); ok {
@@ -206,17 +226,6 @@ func (model Model) BindFrom(
 					return err
 				}
 			}
-		}
-	}
-
-	// Apply custom validators
-	for _, validator := range validators {
-		if validator == nil {
-			continue
-		}
-		err := validator()
-		if err != nil {
-			return err
 		}
 	}
 

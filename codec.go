@@ -44,9 +44,9 @@ type ValidatorText interface {
 	Validate(ctx Context, value string) error
 }
 
-type ValidatorFuncText func(ctx Context, value string) error
+type ValidatorTextFunc func(ctx Context, value string) error
 
-func (f ValidatorFuncText) Validate(ctx Context, value string) error {
+func (f ValidatorTextFunc) Validate(ctx Context, value string) error {
 	return f(ctx, value)
 }
 
@@ -84,9 +84,9 @@ type ValidatorSigned interface {
 	Validate(ctx Context, value int64) error
 }
 
-type ValidatorFuncSigned func(ctx Context, value int64) error
+type ValidatorSignedFunc func(ctx Context, value int64) error
 
-func (f ValidatorFuncSigned) Validate(ctx Context, value int64) error {
+func (f ValidatorSignedFunc) Validate(ctx Context, value int64) error {
 	return f(ctx, value)
 }
 
@@ -163,9 +163,9 @@ type ValidatorUnsigned interface {
 	Validate(ctx Context, value uint64) error
 }
 
-type ValidatorFuncUnsigned func(ctx Context, value uint64) error
+type ValidatorUnsignedFunc func(ctx Context, value uint64) error
 
-func (f ValidatorFuncUnsigned) Validate(ctx Context, value uint64) error {
+func (f ValidatorUnsignedFunc) Validate(ctx Context, value uint64) error {
 	return f(ctx, value)
 }
 
@@ -242,9 +242,9 @@ type ValidatorDecimal interface {
 	Validate(ctx Context, value float64) error
 }
 
-type ValidatorFuncDecimal func(ctx Context, value float64) error
+type ValidatorDecimalFunc func(ctx Context, value float64) error
 
-func (f ValidatorFuncDecimal) Validate(ctx Context, value float64) error {
+func (f ValidatorDecimalFunc) Validate(ctx Context, value float64) error {
 	return f(ctx, value)
 }
 
