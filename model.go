@@ -42,25 +42,27 @@ func myLoginHandler(ctx echo.Context) error {
         Password: "Default password,
 	}
 
-    err := model.AssignFrom(ctx, rec, nil)
+    err := model.AssignFrom(ctx)
     if err != nil {
         return err
     }
 
-    err = model.Bind(&data, &rec)
-    if err != nil {
-      return err
-    }
+    if ctx.Request().Method == echo.POST {
+		err = model.Bind(&data)
+		if err != nil {
+		  return err
+		}
 
-	if model.IsValid() {
-		// Record is valid
-		err := model.AssignTo(ctx, &rec)
-        if err != nil {
-            return err
-        }
-		...
-		return nil
-	}
+		if model.IsValid() {
+			// Record is valid
+			err := model.AssignTo(ctx, &rec)
+			if err != nil {
+				return err
+			}
+			...
+			return nil
+		}
+    }
 
 	// Show form
 	...
@@ -149,6 +151,10 @@ func (model Model) Bind(
 	ctx Context,
 ) error {
 	req := ctx.Request()
+
+	if req.Method == GET {
+		return nil
+	}
 
 	/*
 		if req.ContentLength == 0 {

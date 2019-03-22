@@ -100,7 +100,7 @@ func (d *designer) Compile(files ...string) Template {
 			if item, has := d.views[name]; has {
 				tpl = template.Must(tpl.AddParseTree(item.Name(), item.Tree))
 			} else {
-				tpl = template.Must(tpl.ParseFiles(d.layouts + file))
+				tpl = template.Must(tpl.New(file).Funcs(d.funcs).ParseFiles(d.layouts + file))
 			}
 		} else {
 			list = append(list, d.path+file)
@@ -125,7 +125,7 @@ func NewDesigner(
 
 	for _, view := range views {
 		name := getFileName(view)
-		vs[name] = template.Must(template.ParseFiles(layouts + view))
+		vs[name] = template.Must(template.New(view).Funcs(funcs).ParseFiles(layouts + view))
 	}
 
 	return &designer{
