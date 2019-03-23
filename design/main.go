@@ -20,7 +20,6 @@ package design
 import (
 	"html/template"
 	"io"
-	"path/filepath"
 	"strings"
 
 	"github.com/adverax/echo"
@@ -43,10 +42,10 @@ type Designer interface {
 
 type designer struct {
 	echo    *echo.Echo
-	layouts string                        // Path to the root layouts folder
-	path    string                        // Path to the views folder
-	funcs   template.FuncMap              // Map of shared funcs
-	views   map[string]*template.Template // Map of shared views
+	layouts string           // Path to the root layouts folder
+	path    string           // Path to the views folder
+	funcs   template.FuncMap // Map of shared funcs
+	tpl     *template.Template
 }
 
 func (d *designer) Echo() *echo.Echo {
@@ -56,58 +55,50 @@ func (d *designer) Echo() *echo.Echo {
 func (d *designer) Extends(
 	funcs template.FuncMap,
 	path string,
-	views ...string,
+	files ...string,
 ) Designer {
-	vs := make(map[string]*template.Template)
 	fs := make(template.FuncMap)
-	// Clone parent view list
-	for k, v := range d.views {
-		vs[k] = v
-	}
 	for k, v := range d.funcs {
 		fs[k] = v
-	}
-
-	// Extends view list
-	for _, view := range views {
-		vs[view] = template.Must(template.New(view).ParseFiles(d.layouts + view))
 	}
 	for k, v := range funcs {
 		fs[k] = v
 	}
 
-	// Create new designer
+	tpl, err := d.tpl.Clone()
+	if err != nil {
+		panic(err)
+	}
+	tpl.Funcs(fs)
+
+	if len(files) != 0 {
+		for i, file := range files {
+			files[i] = d.layouts + file
+		}
+
+		template.Must(tpl.ParseFiles(files...))
+	}
+
 	return &designer{
 		echo:    d.echo,
 		layouts: d.layouts,
-		path:    d.path + path,
+		path:    addTrailingSlash(d.path + path),
 		funcs:   fs,
-		views:   vs,
+		tpl:     tpl,
 	}
 }
 
 func (d *designer) Compile(files ...string) Template {
-	tpl := template.New("main").Funcs(d.funcs)
-	var list []string
-
-	for _, file := range files {
-		if strings.HasPrefix(file, "@") {
-			file = file[1:]
-			name := getFileName(file)
-			if !strings.HasPrefix(file, "/") {
-				file = "/" + file
-			}
-			if item, has := d.views[name]; has {
-				tpl = template.Must(tpl.AddParseTree(item.Name(), item.Tree))
-			} else {
-				tpl = template.Must(tpl.New(file).Funcs(d.funcs).ParseFiles(d.layouts + file))
-			}
-		} else {
-			list = append(list, d.path+file)
-		}
+	for i, file := range files {
+		files[i] = d.path + file
 	}
 
-	return template.Must(tpl.ParseFiles(list...))
+	tpl, err := d.tpl.Clone()
+	if err != nil {
+		panic(err)
+	}
+
+	return template.Must(tpl.Funcs(d.funcs).ParseFiles(files...))
 }
 
 func NewDesigner(
@@ -115,34 +106,34 @@ func NewDesigner(
 	funcs template.FuncMap,
 	path string, // Path to the views folder
 	layouts string, // Path to the layouts folder
-	views ...string, // Loaded views
+	files ...string, // Loaded views
 ) Designer {
+	path = addTrailingSlash(path)
+	layouts = addTrailingSlash(layouts)
+
 	if funcs == nil {
 		funcs = make(template.FuncMap)
 	}
 
-	vs := make(map[string]*template.Template)
-
-	for _, view := range views {
-		name := getFileName(view)
-		vs[name] = template.Must(template.New(view).Funcs(funcs).ParseFiles(layouts + view))
+	for i, file := range files {
+		files[i] = layouts + file
 	}
+
+	tpl := template.Must(template.New("root").Funcs(funcs).ParseFiles(files...))
 
 	return &designer{
 		echo:    e,
 		layouts: layouts,
 		path:    path,
 		funcs:   funcs,
-		views:   vs,
+		tpl:     tpl,
 	}
 }
 
-func getFileName(file string) string {
-	if strings.HasPrefix(file, "/") {
-		file = file[1:]
+func addTrailingSlash(path string) string {
+	if strings.HasSuffix(path, "/") {
+		return path
 	}
-	if strings.HasSuffix(file, ".tmpl") || strings.HasSuffix(file, ".tpl") {
-		return strings.TrimSuffix(file, filepath.Ext(file))
-	}
-	return file
+
+	return path + "/"
 }

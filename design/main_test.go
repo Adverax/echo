@@ -49,10 +49,10 @@ func TestDesigner(t *testing.T) {
 		nil,
 		"../_fixture/views",
 		"../_fixture/views",
-		"/main.tmpl",
+		"main.tmpl",
 	)
 
-	tpl := d.Compile("@main", "/content.tmpl", "/library.tmpl")
+	tpl := d.Compile("content.tmpl", "library.tmpl")
 
 	var buf bytes.Buffer
 	err := tpl.Execute(&buf, "Jack")
