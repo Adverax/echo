@@ -636,6 +636,10 @@ func (c *context) Redirect(code int, url string) error {
 	if code < 300 || code > 308 {
 		return ErrInvalidRedirectCode
 	}
+	if c.session != nil {
+		c.session.Save(c)
+	}
+	url = c.echo.UrlLinker.Expand(c, url)
 	c.response.Header().Set(HeaderLocation, url)
 	c.response.WriteHeader(code)
 	return nil

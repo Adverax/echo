@@ -68,7 +68,7 @@ type Session interface {
 	// Flashes returns a slice of flash messages from the session.
 	Flashes() []*Flash
 	// Save saves all sessions used during the current request.
-	Save() error
+	Save(ctx Context) error
 }
 
 // Locale represents localization strategy.
