@@ -431,7 +431,7 @@ func TestFormComponent_SetValue(t *testing.T) {
 	e := echo.New()
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			t.Parallel()
+			//t.Parallel()
 			c := e.NewContext(nil, nil)
 			err := test.field.SetValue(c, test.src)
 			require.NoError(t, err)

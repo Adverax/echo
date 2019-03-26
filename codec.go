@@ -39,7 +39,7 @@ type Codec interface {
 	Encoder
 	Decoder
 	// Get internal empty value
-	Empty() interface{}
+	Empty(ctx Context) (interface{}, error)
 }
 
 type ValidatorText interface {
@@ -56,8 +56,8 @@ type Text struct {
 	Validator ValidatorText
 }
 
-func (codec *Text) Empty() interface{} {
-	return ""
+func (codec *Text) Empty(ctx Context) (interface{}, error) {
+	return "", nil
 }
 
 func (codec *Text) Encode(ctx Context, value string) (interface{}, error) {
@@ -96,8 +96,8 @@ type Signed struct {
 	Validator ValidatorSigned
 }
 
-func (codec *Signed) Empty() interface{} {
-	return int64(0)
+func (codec *Signed) Empty(ctx Context) (interface{}, error) {
+	return int64(0), nil
 }
 
 func (codec *Signed) Encode(ctx Context, value string) (interface{}, error) {
@@ -173,8 +173,8 @@ type Unsigned struct {
 	Validator ValidatorUnsigned
 }
 
-func (codec *Unsigned) Empty() interface{} {
-	return uint64(0)
+func (codec *Unsigned) Empty(ctx Context) (interface{}, error) {
+	return uint64(0), nil
 }
 
 func (codec *Unsigned) Encode(ctx Context, value string) (interface{}, error) {
@@ -250,8 +250,8 @@ type Decimal struct {
 	Validator ValidatorDecimal
 }
 
-func (codec *Decimal) Empty() interface{} {
-	return float64(0)
+func (codec *Decimal) Empty(ctx Context) (interface{}, error) {
+	return float64(0), nil
 }
 
 func (codec *Decimal) Encode(ctx Context, value string) (interface{}, error) {
@@ -323,7 +323,7 @@ type Optional struct {
 
 func (codec *Optional) Encode(ctx Context, value string) (interface{}, error) {
 	if value == "" {
-		return codec.Codec.Empty(), nil
+		return codec.Codec.Empty(ctx)
 	}
 
 	return codec.Codec.Encode(ctx, value)

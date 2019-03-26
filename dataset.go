@@ -54,6 +54,15 @@ type DataSet interface {
 // Map of DataSet by language code.
 type DataSets map[uint16]DataSet // DataSet by language
 
+func (datasets DataSets) Empty(ctx Context) (interface{}, error) {
+	ds, err := datasets.DataSet(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return ds.Empty(ctx)
+}
+
 func (datasets DataSets) DataSet(ctx Context) (DataSet, error) {
 	lang := ctx.Locale().Language()
 	if ds, ok := datasets[lang]; ok {
@@ -131,8 +140,8 @@ type dataSet struct {
 	index    index
 }
 
-func (ds *dataSet) Empty() interface{} {
-	return ""
+func (ds *dataSet) Empty(ctx Context) (interface{}, error) {
+	return "", nil
 }
 
 func (ds *dataSet) Encode(ctx Context, value string) (interface{}, error) {
