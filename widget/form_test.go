@@ -96,17 +96,17 @@ func TestFormComponent_Render(t *testing.T) {
 			dst: `{"Empty":"(Empty)","Items":[{"Label":"London","Value":"1"},{"Label":"Paris","Value":"2"}],"Label":"City","Name":"City"}`,
 		},
 
-		"FormMultiSelect: simple": {
-			src: &FormMultiSelect{
+		"FormFlag": {
+			src: &FormFlag{
 				Name:  "Option",
 				Label: "Input option",
 			},
-			val: []string{"on"},
-			dst: `{"Label":"Input option","Name":"Option","Value":"on"}`,
+			val: true,
+			dst: `{"Label":"Input option","Name":"Option","Value":"1"}`,
 		},
 
-		"FormMultiSelect: complex": {
-			src: &FormMultiSelect{
+		"FormFlags": {
+			src: &FormFlags{
 				Name:  "Option",
 				Label: "Input option",
 				Items: cities,
@@ -116,7 +116,7 @@ func TestFormComponent_Render(t *testing.T) {
 		},
 
 		"FormSubmit: simple": {
-			src: &FormMultiSelect{
+			src: &FormSubmit{
 				Label: "Accept",
 			},
 			dst: `{"Label":"Accept"}`,
@@ -412,7 +412,7 @@ func TestFormComponent_SetValue(t *testing.T) {
 		},
 
 		"FormMultiSelect: Normal": {
-			field: &FormMultiSelect{
+			field: &FormFlags{
 				Items: cities,
 			},
 			src: []string{"1", "100"},
@@ -420,12 +420,12 @@ func TestFormComponent_SetValue(t *testing.T) {
 			val: []string{"1"},
 		},
 
-		"FormMultiSelect: without dataset": {
+		/*"FormMultiSelect: without dataset": {
 			field: &FormMultiSelect{},
 			src:   []string{"on", "xxx"},
 			dst:   []string{"on", "xxx"},
 			val:   []string{"on"},
-		},
+		},*/
 	}
 
 	e := echo.New()

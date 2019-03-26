@@ -551,13 +551,96 @@ func (w *FormSelect) Reset(ctx echo.Context) error {
 	return nil
 }
 
-// FormMultiSelect represent html entity <input type="checkbox">.
+// FormFlag represents single html entity <input tpe="ckeckbox>
 // Example:
-//   subscribe := &widget.FormMultiSelect{
+//   subscribe := widget.FormFlag{
+//     Name: "Subscribe",
+//     Items: ....,
+//   }
+type FormFlag struct {
+	field
+	Id          string              // Field identifier
+	Name        string              // Field name
+	Label       interface{}         // Field label
+	Disabled    bool                // Field disabled
+	Hidden      bool                // Field is hidden (not rendered)
+	Default     interface{}         // Default value
+	Placeholder interface{}         // Placeholder text
+	Filter      FormFieldFilterFunc // Custom filter
+}
+
+func (w *FormFlag) GetName() string {
+	return w.Name
+}
+
+func (w *FormFlag) GetDisabled() bool {
+	return w.Disabled
+}
+
+func (w *FormFlag) GetHidden() bool {
+	return w.Hidden
+}
+
+func (w *FormFlag) SetVal(ctx echo.Context, value interface{}) {
+	val, _ := generic.ConvertToBoolean(value)
+	w.field.setVal(ctx, val, nil)
+}
+
+func (w *FormFlag) SetValue(
+	ctx echo.Context,
+	value []string,
+) error {
+	value = filterValue(w.Filter, value)
+
+	w.initialized = true
+	w.value = value
+	w.val = len(value) != 0 && value[0] == "1"
+	return nil
+}
+
+func (w *FormFlag) Render(
+	ctx echo.Context,
+) (interface{}, error) {
+	if w.Hidden {
+		return nil, nil
+	}
+
+	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
+	if err != nil {
+		return nil, err
+	}
+
+	value := w.value
+	if len(value) != 0 {
+		res["Value"] = value[0]
+	}
+
+	if w.Placeholder != nil {
+		placeholder, err := RenderWidget(ctx, w.Placeholder)
+		if err != nil {
+			return nil, err
+		}
+		res["Placeholder"] = placeholder
+	}
+
+	return res, nil
+}
+
+func (w *FormFlag) Reset(ctx echo.Context) error {
+	w.field.reset()
+	if w.Default != nil {
+		w.SetVal(ctx, w.Default)
+	}
+	return nil
+}
+
+// FormFlags represent html entity <input type="checkbox">.
+// Example:
+//   subscribe := &widget.FormFlags{
 //       Name: "Subscribe",
 //       Items: ...,
 //   }
-type FormMultiSelect struct {
+type FormFlags struct {
 	field
 	Id          string              // Field identifier
 	Name        string              // Field name
@@ -570,40 +653,23 @@ type FormMultiSelect struct {
 	Placeholder interface{}         // Placeholder text
 }
 
-func (w *FormMultiSelect) GetName() string {
+func (w *FormFlags) GetName() string {
 	return w.Name
 }
 
-func (w *FormMultiSelect) GetDisabled() bool {
+func (w *FormFlags) GetDisabled() bool {
 	return w.Disabled
 }
 
-func (w *FormMultiSelect) GetHidden() bool {
+func (w *FormFlags) GetHidden() bool {
 	return w.Hidden
 }
 
-func (w *FormMultiSelect) GetVal() interface{} {
-	if w.Items == nil {
-		vs, ok := w.val.([]string)
-		return ok && len(vs) != 0
-	}
-
-	return w.val
-}
-
-func (w *FormMultiSelect) SetVal(ctx echo.Context, value interface{}) {
+func (w *FormFlags) SetVal(ctx echo.Context, value interface{}) {
 	w.initialized = true
 	switch v := value.(type) {
 	case []string:
 		w.value = v
-	case bool:
-		if w.Items == nil {
-			if v {
-				w.value = []string{"1"}
-			} else {
-				w.value = []string{"0"}
-			}
-		}
 	default:
 		vv, _ := generic.ConvertToString(v)
 		w.value = []string{vv}
@@ -611,7 +677,7 @@ func (w *FormMultiSelect) SetVal(ctx echo.Context, value interface{}) {
 	w.val = w.value
 }
 
-func (w *FormMultiSelect) SetValue(
+func (w *FormFlags) SetValue(
 	ctx echo.Context,
 	value []string,
 ) error {
@@ -620,7 +686,7 @@ func (w *FormMultiSelect) SetValue(
 	w.initialized = true
 	w.value = value
 
-	keys, err := echo.DataSetKeys(ctx, w.getItems())
+	keys, err := echo.DataSetKeys(ctx, w.Items)
 	if err != nil {
 		return err
 	}
@@ -629,7 +695,7 @@ func (w *FormMultiSelect) SetValue(
 	return nil
 }
 
-func (w *FormMultiSelect) Render(
+func (w *FormFlags) Render(
 	ctx echo.Context,
 ) (interface{}, error) {
 	if w.Hidden {
@@ -650,14 +716,7 @@ func (w *FormMultiSelect) Render(
 	if err != nil {
 		return nil, err
 	}
-	if items != nil {
-		res["Items"] = items
-	} else {
-		value := w.value
-		if len(value) != 0 {
-			res["Value"] = value[0]
-		}
-	}
+	res["Items"] = items
 
 	if w.Placeholder != nil {
 		placeholder, err := RenderWidget(ctx, w.Placeholder)
@@ -670,20 +729,12 @@ func (w *FormMultiSelect) Render(
 	return res, nil
 }
 
-func (w *FormMultiSelect) Reset(ctx echo.Context) error {
+func (w *FormFlags) Reset(ctx echo.Context) error {
 	w.field.reset()
 	if w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
 	return nil
-}
-
-func (w *FormMultiSelect) getItems() echo.DataSet {
-	if w.Items != nil {
-		return w.Items
-	}
-
-	return defaultMultiSelectItems
 }
 
 // FormSubmit represents action Submit
@@ -1015,7 +1066,7 @@ func intersect(as, bs []string) []string {
 	return cs
 }
 
-var defaultMultiSelectItems = echo.NewDataSet(
+var defaultFlagItems = echo.NewDataSet(
 	map[string]string{
 		"1": "on",
 		"0": "off",
