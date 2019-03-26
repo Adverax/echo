@@ -47,6 +47,8 @@ func IsEmpty(value interface{}) bool {
 		return val == ""
 	case bool:
 		return val == false
+	case []string:
+		return len(val) == 0
 	default:
 		return true
 	}

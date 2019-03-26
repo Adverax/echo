@@ -444,10 +444,11 @@ func asBool(src interface{}) (bool, error) {
 		return v != 0, nil
 	case uint64:
 		return v != 0, nil
-	case string:
-		return v != "", nil
 	case []byte:
 		return len(v) != 0, nil
+	case string:
+		vv, _ := strconv.ParseBool(v)
+		return vv, nil
 	default:
 		return false, nil
 	}

@@ -131,6 +131,10 @@ type dataSet struct {
 	index    index
 }
 
+func (ds *dataSet) Empty() interface{} {
+	return ""
+}
+
 func (ds *dataSet) Encode(ctx Context, value string) (interface{}, error) {
 	if val, ok := ds.encoders[value]; ok {
 		return val, nil

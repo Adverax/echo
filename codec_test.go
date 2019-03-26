@@ -25,17 +25,18 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestText_Encode(t *testing.T) {
+func Test_Encode(t *testing.T) {
 	type Test struct {
-		codec  Text
+		codec  Codec
 		value  string
 		result interface{}
 		error  bool
 	}
 
 	tests := map[string]Test{
-		"The value matched custom validator's must be accepted": {
-			codec: Text{
+		// TEXT
+		"TEXT: The value matched custom validator's must be accepted": {
+			codec: &Text{
 				Validator: ValidatorTextFunc(
 					func(ctx Context, value string) error {
 						return nil
@@ -45,8 +46,8 @@ func TestText_Encode(t *testing.T) {
 			value:  "aaa",
 			result: "aaa",
 		},
-		"The value don't matched custom validator's must be rejected": {
-			codec: Text{
+		"TEXT: The value don't matched custom validator's must be rejected": {
+			codec: &Text{
 				Validator: ValidatorTextFunc(
 					func(ctx Context, value string) error {
 						return ValidationErrors{
@@ -58,61 +59,35 @@ func TestText_Encode(t *testing.T) {
 			value: "aaa",
 			error: true,
 		},
-	}
 
-	e := New()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	for key, test := range tests {
-		result, err := test.codec.Encode(c, test.value)
-		if test.error {
-			assert.Error(t, err, "Error in test %q", key)
-		} else {
-			if assert.NoError(t, err, "Error in test %q", key) {
-				assert.Equal(t, test.result, result, "Error in test %q", key)
-			}
-		}
-	}
-}
-
-func TestSigned_Encode(t *testing.T) {
-	type Test struct {
-		codec  Signed
-		value  string
-		result interface{}
-		error  bool
-	}
-
-	tests := map[string]Test{
-		"The invalid value must be rejected": {
-			codec: Signed{},
+		// SIGNED
+		"SIGNED: The invalid value must be rejected": {
+			codec: &Signed{},
 			value: "abcd",
 			error: true,
 		},
-		"The valid value must be accepted": {
-			codec:  Signed{},
+		"SIGNED: The valid value must be accepted": {
+			codec:  &Signed{},
 			value:  "123",
 			result: int64(123),
 		},
-		"The value less than allowed min must be rejected": {
-			codec: Signed{Min: 10, Max: 100},
+		"SIGNED: The value less than allowed min must be rejected": {
+			codec: &Signed{Min: 10, Max: 100},
 			value: "1",
 			error: true,
 		},
-		"The value greater than allowed max must be rejected": {
-			codec: Signed{Min: 10, Max: 100},
+		"SIGNED: The value greater than allowed max must be rejected": {
+			codec: &Signed{Min: 10, Max: 100},
 			value: "1000",
 			error: true,
 		},
-		"The value inside allowed range must be accepted": {
-			codec:  Signed{Min: 10, Max: 100},
+		"SIGNED: The value inside allowed range must be accepted": {
+			codec:  &Signed{Min: 10, Max: 100},
 			value:  "50",
 			result: int64(50),
 		},
-		"The value matched custom validator's must be accepted": {
-			codec: Signed{
+		"SIGNED: The value matched custom validator's must be accepted": {
+			codec: &Signed{
 				Validator: ValidatorSignedFunc(
 					func(ctx Context, value int64) error {
 						return nil
@@ -122,8 +97,8 @@ func TestSigned_Encode(t *testing.T) {
 			value:  "123",
 			result: int64(123),
 		},
-		"The value don't matched custom validator's must be rejected": {
-			codec: Signed{
+		"SIGNEDThe value don't matched custom validator's must be rejected": {
+			codec: &Signed{
 				Validator: ValidatorSignedFunc(
 					func(ctx Context, value int64) error {
 						return ValidationErrors{
@@ -135,61 +110,35 @@ func TestSigned_Encode(t *testing.T) {
 			value: "123",
 			error: true,
 		},
-	}
 
-	e := New()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	for key, test := range tests {
-		result, err := test.codec.Encode(c, test.value)
-		if test.error {
-			assert.Error(t, err, "Error in test %q", key)
-		} else {
-			if assert.NoError(t, err, "Error in test %q", key) {
-				assert.Equal(t, test.result, result, "Error in test %q", key)
-			}
-		}
-	}
-}
-
-func TestUnsigned_Encode(t *testing.T) {
-	type Test struct {
-		codec  Unsigned
-		value  string
-		result interface{}
-		error  bool
-	}
-
-	tests := map[string]Test{
-		"The invalid value must be rejected": {
-			codec: Unsigned{},
+		// UNSIGNED
+		"UNSIGNED: The invalid value must be rejected": {
+			codec: &Unsigned{},
 			value: "abcd",
 			error: true,
 		},
-		"The valid value must be accepted": {
-			codec:  Unsigned{},
+		"UNSIGNED: The valid value must be accepted": {
+			codec:  &Unsigned{},
 			value:  "123",
 			result: uint64(123),
 		},
-		"The value less than allowed min must be rejected": {
-			codec: Unsigned{Min: 10, Max: 100},
+		"UNSIGNED: The value less than allowed min must be rejected": {
+			codec: &Unsigned{Min: 10, Max: 100},
 			value: "1",
 			error: true,
 		},
-		"The value greater than allowed max must be rejected": {
-			codec: Unsigned{Min: 10, Max: 100},
+		"UNSIGNED: The value greater than allowed max must be rejected": {
+			codec: &Unsigned{Min: 10, Max: 100},
 			value: "1000",
 			error: true,
 		},
-		"The value inside allowed range must be accepted": {
-			codec:  Unsigned{Min: 10, Max: 100},
+		"UNSIGNED: The value inside allowed range must be accepted": {
+			codec:  &Unsigned{Min: 10, Max: 100},
 			value:  "50",
 			result: uint64(50),
 		},
-		"The value matched custom validator's must be accepted": {
-			codec: Unsigned{
+		"UNSIGNED: The value matched custom validator's must be accepted": {
+			codec: &Unsigned{
 				Validator: ValidatorUnsignedFunc(
 					func(ctx Context, value uint64) error {
 						return nil
@@ -199,8 +148,8 @@ func TestUnsigned_Encode(t *testing.T) {
 			value:  "123",
 			result: uint64(123),
 		},
-		"The value don't matched custom validator's must be rejected": {
-			codec: Unsigned{
+		"UNSIGNED: The value don't matched custom validator's must be rejected": {
+			codec: &Unsigned{
 				Validator: ValidatorUnsignedFunc(
 					func(ctx Context, value uint64) error {
 						return ValidationErrors{
@@ -212,61 +161,35 @@ func TestUnsigned_Encode(t *testing.T) {
 			value: "123",
 			error: true,
 		},
-	}
 
-	e := New()
-	req := httptest.NewRequest(http.MethodPost, "/", nil)
-	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-
-	for key, test := range tests {
-		result, err := test.codec.Encode(c, test.value)
-		if test.error {
-			assert.Error(t, err, "Error in test %q", key)
-		} else {
-			if assert.NoError(t, err, "Error in test %q", key) {
-				assert.Equal(t, test.result, result, "Error in test %q", key)
-			}
-		}
-	}
-}
-
-func TestDecimal_Encode(t *testing.T) {
-	type Test struct {
-		codec  Decimal
-		value  string
-		result interface{}
-		error  bool
-	}
-
-	tests := map[string]Test{
-		"The invalid value must be rejected": {
-			codec: Decimal{},
+		// DECIMAL
+		"DECIMAL: The invalid value must be rejected": {
+			codec: &Decimal{},
 			value: "abcd",
 			error: true,
 		},
-		"The valid value must be accepted": {
-			codec:  Decimal{},
+		"DECIMAL: The valid value must be accepted": {
+			codec:  &Decimal{},
 			value:  "123.5",
 			result: float64(123.5),
 		},
-		"The value less than allowed min must be rejected": {
-			codec: Decimal{Min: 10, Max: 100},
+		"DECIMAL: The value less than allowed min must be rejected": {
+			codec: &Decimal{Min: 10, Max: 100},
 			value: "1",
 			error: true,
 		},
-		"The value greater than allowed max must be rejected": {
-			codec: Decimal{Min: 10, Max: 100},
+		"DECIMAL: The value greater than allowed max must be rejected": {
+			codec: &Decimal{Min: 10, Max: 100},
 			value: "1000",
 			error: true,
 		},
-		"The value inside allowed range must be accepted": {
-			codec:  Decimal{Min: 10, Max: 100},
+		"DECIMAL: The value inside allowed range must be accepted": {
+			codec:  &Decimal{Min: 10, Max: 100},
 			value:  "50",
 			result: float64(50),
 		},
-		"The value matched custom validator's must be accepted": {
-			codec: Decimal{
+		"DECIMAL: The value matched custom validator's must be accepted": {
+			codec: &Decimal{
 				Validator: ValidatorDecimalFunc(
 					func(ctx Context, value float64) error {
 						return nil
@@ -276,8 +199,8 @@ func TestDecimal_Encode(t *testing.T) {
 			value:  "123",
 			result: float64(123),
 		},
-		"The value don't matched custom validator's must be rejected": {
-			codec: Decimal{
+		"DECIMAL: The value don't matched custom validator's must be rejected": {
+			codec: &Decimal{
 				Validator: ValidatorDecimalFunc(
 					func(ctx Context, value float64) error {
 						return ValidationErrors{
@@ -289,6 +212,22 @@ func TestDecimal_Encode(t *testing.T) {
 			value: "123",
 			error: true,
 		},
+
+		// OPTIONAL
+		"OPTIONAL: The valid value must be accepted": {
+			codec: &Optional{
+				Codec: &Signed{},
+			},
+			value:  "123",
+			result: int64(123),
+		},
+		"OPTIONAL: The default value must be accepted": {
+			codec: &Optional{
+				Codec: &Signed{},
+			},
+			value:  "123",
+			result: int64(0),
+		},
 	}
 
 	e := New()
@@ -296,14 +235,17 @@ func TestDecimal_Encode(t *testing.T) {
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 
-	for key, test := range tests {
-		result, err := test.codec.Encode(c, test.value)
-		if test.error {
-			assert.Error(t, err, "Error in test %q", key)
-		} else {
-			if assert.NoError(t, err, "Error in test %q", key) {
-				assert.Equal(t, test.result, result, "Error in test %q", key)
+	for name, test := range tests {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			result, err := test.codec.Encode(c, test.value)
+			if test.error {
+				assert.Error(t, err)
+			} else {
+				if assert.NoError(t, err) {
+					assert.Equal(t, test.result, result)
+				}
 			}
-		}
+		})
 	}
 }

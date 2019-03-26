@@ -279,11 +279,6 @@ func (errs ValidationErrors) Error() string {
 	return "Validation errors"
 }
 
-// Check for empty value
-type Empty interface {
-	IsEmpty(value interface{}) bool
-}
-
 // Url manager (linker)
 type UrlLinker interface {
 	// Render url

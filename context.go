@@ -637,7 +637,9 @@ func (c *context) Redirect(code int, url string) error {
 		return ErrInvalidRedirectCode
 	}
 	if c.session != nil {
-		c.session.Save(c)
+		if err := c.session.Save(c); err != nil {
+			return err
+		}
 	}
 	url = c.echo.UrlLinker.Expand(c, url)
 	c.response.Header().Set(HeaderLocation, url)

@@ -582,13 +582,31 @@ func (w *FormMultiSelect) GetHidden() bool {
 	return w.Hidden
 }
 
+func (w *FormMultiSelect) GetVal() interface{} {
+	if w.Items == nil {
+		vs, ok := w.val.([]string)
+		return ok && len(vs) != 0
+	}
+
+	return w.val
+}
+
 func (w *FormMultiSelect) SetVal(ctx echo.Context, value interface{}) {
 	w.initialized = true
-	if v, ok := value.([]string); ok {
+	switch v := value.(type) {
+	case []string:
 		w.value = v
-	} else {
-		v, _ := generic.ConvertToString(value)
-		w.value = []string{v}
+	case bool:
+		if w.Items == nil {
+			if v {
+				w.value = []string{"1"}
+			} else {
+				w.value = []string{"0"}
+			}
+		}
+	default:
+		vv, _ := generic.ConvertToString(v)
+		w.value = []string{vv}
 	}
 	w.val = w.value
 }
@@ -999,8 +1017,8 @@ func intersect(as, bs []string) []string {
 
 var defaultMultiSelectItems = echo.NewDataSet(
 	map[string]string{
-		"on":  "on",
-		"off": "off",
+		"1": "on",
+		"0": "off",
 	},
 	false,
 )

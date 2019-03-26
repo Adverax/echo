@@ -376,12 +376,6 @@ func (w *Variant) Render(ctx echo.Context) (interface{}, error) {
 		f = DefaultFormatter
 	}
 
-	if cc, ok := f.(echo.Empty); ok {
-		if cc.IsEmpty(w.Value) {
-			return "", nil
-		}
-	}
-
 	val, err := f.Format(ctx, w.Value)
 	if err != nil {
 		return "", err
