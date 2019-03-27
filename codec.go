@@ -346,6 +346,24 @@ type Formatter interface {
 	Format(ctx Context, value interface{}) (val interface{}, err error)
 }
 
+// OptionalFormatter is formatter for any optional value.
+// OptionalFormatter is wrapper for inner formatter.
+// Example:
+//   formatter := &OptionalFormatter{
+//     Formatter: &Signed{},
+//   }
+type OptionalFormatter struct {
+	Formatter
+}
+
+func (formatter *OptionalFormatter) Format(ctx Context, value interface{}) (val interface{}, err error) {
+	if generic.IsEmpty(value) {
+		return "", nil
+	}
+
+	return formatter.Formatter.Format(ctx, value)
+}
+
 // Formatter, that based on codec.Decode method
 type BaseFormatter struct {
 	Decoder
@@ -404,11 +422,14 @@ func NewPairConverter(codec DataSet) PairConverter {
 }
 
 var (
-	TextCodec     = new(Text)
-	SignedCodec   = new(Signed)
-	UnsignedCodec = new(Unsigned)
-	DecimalCodec  = new(Decimal)
-	BoolCodec     = new(Unsigned) // Override in real application
+	TextCodec             = new(Text)
+	SignedCodec           = new(Signed)
+	UnsignedCodec         = new(Unsigned)
+	DecimalCodec          = new(Decimal)
+	BoolCodec             = new(Unsigned) // Override in real application
+	OptionalSignedCodec   = &Optional{Codec: SignedCodec}
+	OptionalUnsignedCodec = &Optional{Codec: UnsignedCodec}
+	OptionalDecimalCodec  = &Optional{Codec: DecimalCodec}
 )
 
 func formatDefault(

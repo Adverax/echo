@@ -533,11 +533,18 @@ func (w *FormSelect) Render(
 	}
 
 	if !w.Required {
+		empty := make(map[string]interface{}, 2)
 		label, err := ctx.Echo().Locale.Message(ctx, uint32(MessageSelectorEmpty))
 		if err != nil {
 			return nil, err
 		}
-		res["Empty"] = label
+		empty["Label"] = label
+		value := w.GetValue()
+		selected := len(value) != 0 && value[0] == ""
+		if selected {
+			empty["Selected"] = true
+		}
+		res["Empty"] = empty
 	}
 
 	return res, nil
@@ -610,10 +617,12 @@ func (w *FormFlag) Render(
 		return nil, err
 	}
 
-	value := w.value
-	if len(value) != 0 {
-		res["Value"] = value[0]
+	val, _ := generic.ConvertToBoolean(w.val)
+	if val {
+		res["Selected"] = true
 	}
+
+	res["Value"] = "1"
 
 	if w.Placeholder != nil {
 		placeholder, err := RenderWidget(ctx, w.Placeholder)

@@ -93,7 +93,7 @@ func TestFormComponent_Render(t *testing.T) {
 				Required: false,
 				Items:    cities,
 			},
-			dst: `{"Empty":"(Empty)","Items":[{"Label":"London","Value":"1"},{"Label":"Paris","Value":"2"}],"Label":"City","Name":"City"}`,
+			dst: `{"Empty":{"Label":"(Empty)"},"Items":[{"Label":"London","Value":"1"},{"Label":"Paris","Value":"2"}],"Label":"City","Name":"City"}`,
 		},
 
 		"FormFlag": {
@@ -102,7 +102,7 @@ func TestFormComponent_Render(t *testing.T) {
 				Label: "Input option",
 			},
 			val: true,
-			dst: `{"Label":"Input option","Name":"Option","Value":"1"}`,
+			dst: `{"Label":"Input option","Name":"Option","Selected":true,"Value":"1"}`,
 		},
 
 		"FormFlags": {
