@@ -415,7 +415,7 @@ func TestRenderWidget(t *testing.T) {
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
 			c := e.NewContext(nil, nil)
-			tree, err := RenderWidget(c, test.src)
+			tree, err := echo.RenderWidget(c, test.src)
 			require.NoError(t, err)
 			dst, err := json.Marshal(tree)
 			require.NoError(t, err)
