@@ -378,7 +378,7 @@ type row struct {
 func (row *row) Scan(dest ...interface{}) error {
 	err := row.r.Scan(dest...)
 	if err != nil {
-		return err
+		return recode(err)
 	}
 	return nil
 }
@@ -392,19 +392,14 @@ type rows struct {
 func (rows *rows) Scan(dest ...interface{}) error {
 	err := rows.rs.Scan(dest...)
 	if err != nil {
-		return err
+		return recode(err)
 	}
 	return nil
 }
 
 func (rows *rows) Close() error {
 	rows.db.endQuery(rows.started)
-
-	err := rows.rs.Close()
-	if err != nil {
-		return err
-	}
-	return nil
+	return recode(rows.rs.Close())
 }
 
 func (rows *rows) Err() error {

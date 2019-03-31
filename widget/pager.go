@@ -61,11 +61,11 @@ func (w *PagerReport) render(
 
 type Pager struct {
 	Id       string        // Pager identifier (optional)
-	MsgEmpty Widget        // Message for empty record set (optional)
-	MsgStats Widget        // Message for statistics )optional)
-	Label    Widget        // Pager label (optional)
-	Prev     Widget        // Previous page label (optional)
-	Next     Widget        // Next page label (optional)
+	MsgEmpty echo.Widget   // Message for empty record set (optional)
+	MsgStats echo.Widget   // Message for statistics )optional)
+	Label    echo.Widget   // Pager label (optional)
+	Prev     echo.Widget   // Previous page label (optional)
+	Next     echo.Widget   // Next page label (optional)
 	Param    string        // Hot parameter (default "pg")
 	Capacity int           // Items count per page (default 10). Without data provider it is row count
 	BtnCount int           // Links count in pager (default 10)

@@ -77,11 +77,6 @@ func DeclareDefaultMsg(msg MESSAGE, message string) MESSAGE {
 	return msg
 }
 
-// Widget is abstract entity, that generated output data
-type Widget interface {
-	Render(ctx echo.Context) (interface{}, error)
-}
-
 type Map map[string]interface{}
 
 func (ws Map) Render(ctx echo.Context) (interface{}, error) {
@@ -118,7 +113,7 @@ func (w *Optional) Render(ctx echo.Context) (interface{}, error) {
 	if w.Hidden {
 		return nil, nil
 	}
-	return RenderWidget(ctx, w.Value)
+	return echo.RenderWidget(ctx, w.Value)
 }
 
 // Raw text
@@ -283,7 +278,7 @@ func (w *Format) String(ctx echo.Context) (string, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
-	val, err := RenderWidget(ctx, w.Layout)
+	val, err := echo.RenderWidget(ctx, w.Layout)
 	if err != nil {
 		return "", err
 	}
@@ -308,7 +303,7 @@ func (w *Template) Render(ctx echo.Context) (interface{}, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
-	val, err := RenderWidget(ctx, w.Layout)
+	val, err := echo.RenderWidget(ctx, w.Layout)
 	if err != nil {
 		return nil, err
 	}
@@ -333,7 +328,7 @@ func (w *Template) renderParams(ctx echo.Context, code string) (interface{}, err
 				name := matches[1]
 				value, ok := w.Params[name]
 				if ok {
-					if ww, valid := value.(Widget); valid {
+					if ww, valid := value.(echo.Widget); valid {
 						c, err := ww.Render(ctx)
 						if err == nil {
 							v, err := ConvertToHtml(c)
@@ -395,7 +390,7 @@ func RenderParams(
 		if param == nil {
 			list[i] = ""
 		} else {
-			if widget, ok := param.(Widget); ok {
+			if widget, ok := param.(echo.Widget); ok {
 				item, err := widget.Render(ctx)
 				if err != nil {
 					return nil, err
@@ -419,17 +414,6 @@ func ConvertToHtml(v interface{}) (string, error) {
 	}
 }
 
-func RenderWidget(
-	ctx echo.Context,
-	v interface{},
-) (interface{}, error) {
-	if w, ok := v.(Widget); ok {
-		return w.Render(ctx)
-	}
-
-	return v, nil
-}
-
 func RenderMap(
 	ctx echo.Context,
 	widgets Map,
@@ -437,7 +421,7 @@ func RenderMap(
 	res := make(map[string]interface{}, len(widgets))
 	for key, widget := range widgets {
 		if widget != nil {
-			item, err := RenderWidget(ctx, widget)
+			item, err := echo.RenderWidget(ctx, widget)
 			if err != nil {
 				return nil, err
 			}
@@ -461,7 +445,7 @@ func RenderList(
 	var res []interface{}
 	for _, widget := range list {
 		if widget != nil {
-			item, err := RenderWidget(ctx, widget)
+			item, err := echo.RenderWidget(ctx, widget)
 			if err != nil {
 				return nil, err
 			}
@@ -470,52 +454,6 @@ func RenderList(
 			}
 		}
 	}
-	return res, nil
-}
-
-func RenderModel(
-	ctx echo.Context,
-	model echo.Model,
-) (interface{}, error) {
-	res := make(map[string]interface{}, len(model)+1)
-
-	for key, item := range model {
-		if item == nil {
-			continue
-		}
-
-		f, err := RenderWidget(ctx, item)
-		if err != nil {
-			return nil, err
-		}
-
-		res[key] = f
-	}
-
-	return res, nil
-}
-
-func RenderModels(
-	ctx echo.Context,
-	models echo.Models,
-) (interface{}, error) {
-	res := make([]interface{}, 0, len(models))
-	for _, model := range models {
-		if model != nil {
-			item, err := RenderModel(ctx, model)
-			if err != nil {
-				return nil, err
-			}
-			if item != nil {
-				res = append(res, item)
-			}
-		}
-	}
-
-	if len(res) == 0 {
-		return nil, nil
-	}
-
 	return res, nil
 }
 
@@ -599,7 +537,7 @@ func FormatMessage(
 	message interface{},
 	args ...interface{},
 ) (string, error) {
-	msg, err := RenderWidget(ctx, message)
+	msg, err := echo.RenderWidget(ctx, message)
 	if err != nil {
 		return "", err
 	}
@@ -623,7 +561,7 @@ func escapeUrl(u string) (template.URL, error) {
 // Render first of existing widgets
 func Coalesce(
 	ctx echo.Context,
-	ws ...Widget,
+	ws ...echo.Widget,
 ) (interface{}, error) {
 	for _, w := range ws {
 		if w != nil {

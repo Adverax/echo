@@ -53,7 +53,7 @@ func (w *Action) Render(
 	res := make(map[string]interface{}, 16)
 
 	if w.Label != nil {
-		label, err := RenderWidget(ctx, w.Label)
+		label, err := echo.RenderWidget(ctx, w.Label)
 		if err != nil {
 			return nil, err
 		}
@@ -69,7 +69,7 @@ func (w *Action) Render(
 	}
 
 	if w.Confirm != nil {
-		confirm, err := RenderWidget(ctx, w.Confirm)
+		confirm, err := echo.RenderWidget(ctx, w.Confirm)
 		if err != nil {
 			return nil, err
 		}
@@ -77,7 +77,7 @@ func (w *Action) Render(
 	}
 
 	if w.Tooltip != nil {
-		tooltip, err := RenderWidget(ctx, w.Tooltip)
+		tooltip, err := echo.RenderWidget(ctx, w.Tooltip)
 		if err != nil {
 			return nil, err
 		}
@@ -85,7 +85,7 @@ func (w *Action) Render(
 	}
 
 	if w.Value != nil {
-		value, err := RenderWidget(ctx, w.Value)
+		value, err := echo.RenderWidget(ctx, w.Value)
 		if err != nil {
 			return nil, err
 		}

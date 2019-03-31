@@ -54,7 +54,7 @@ func (w *TableAction) Render(
 	}
 
 	if w.Tooltip != nil {
-		tooltip, err := RenderWidget(ctx, w.Tooltip)
+		tooltip, err := echo.RenderWidget(ctx, w.Tooltip)
 		if err != nil {
 			return nil, err
 		}
@@ -66,7 +66,7 @@ func (w *TableAction) Render(
 	}
 
 	if w.Confirm != nil {
-		confirm, err := RenderWidget(ctx, w.Confirm)
+		confirm, err := echo.RenderWidget(ctx, w.Confirm)
 		if err != nil {
 			return nil, err
 		}
@@ -127,7 +127,7 @@ func (w *TableActions) Render(
 			})
 		}
 
-		action, err := RenderWidget(ctx, act)
+		action, err := echo.RenderWidget(ctx, act)
 		if err != nil {
 			return nil, err
 		}
@@ -189,7 +189,7 @@ func (w *Table) renderHead(
 		if col.Label == nil {
 			cell["Label"] = ""
 		} else {
-			label, err := RenderWidget(ctx, col.Label)
+			label, err := echo.RenderWidget(ctx, col.Label)
 			if err != nil {
 				return nil, err
 			}
@@ -249,7 +249,7 @@ func (w *Table) renderRow(
 			return nil, err
 		}
 
-		val, err := RenderWidget(ctx, value)
+		val, err := echo.RenderWidget(ctx, value)
 		if err != nil {
 			return nil, err
 		}

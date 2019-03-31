@@ -44,7 +44,7 @@ func (w *Alert) Render(
 		return nil, nil
 	}
 
-	message, err := RenderWidget(ctx, w.Message)
+	message, err := echo.RenderWidget(ctx, w.Message)
 	if err != nil || message == nil {
 		return nil, err
 	}

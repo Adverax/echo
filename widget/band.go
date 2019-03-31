@@ -73,7 +73,7 @@ func (w *Band) renderItems(
 			continue
 		}
 
-		r, err := RenderWidget(ctx, item)
+		r, err := echo.RenderWidget(ctx, item)
 		if err != nil {
 			return nil, err
 		}

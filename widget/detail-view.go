@@ -55,7 +55,7 @@ func (w *DetailView) Render(
 	if keyColumn == nil {
 		keyColumn = MessageDetailsColumnKey
 	}
-	key, err := RenderWidget(ctx, keyColumn)
+	key, err := echo.RenderWidget(ctx, keyColumn)
 	if err != nil {
 		return nil, err
 	}
@@ -64,7 +64,7 @@ func (w *DetailView) Render(
 	if valColumn == nil {
 		valColumn = MessageDetailsColumnVal
 	}
-	value, err := RenderWidget(ctx, valColumn)
+	value, err := echo.RenderWidget(ctx, valColumn)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (w *Detail) Render(
 	res := make(map[string]interface{}, 16)
 
 	if w.Label != nil {
-		label, err := RenderWidget(ctx, w.Label)
+		label, err := echo.RenderWidget(ctx, w.Label)
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +105,7 @@ func (w *Detail) Render(
 	}
 
 	if w.Value != nil {
-		value, err := RenderWidget(ctx, w.Value)
+		value, err := echo.RenderWidget(ctx, w.Value)
 		if err != nil {
 			return nil, err
 		}

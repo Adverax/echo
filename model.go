@@ -322,6 +322,27 @@ func (model Model) AssignTo(
 	return nil
 }
 
+func (model Model) Render(
+	ctx Context,
+) (interface{}, error) {
+	res := make(map[string]interface{}, len(model)+1)
+
+	for key, item := range model {
+		if item == nil {
+			continue
+		}
+
+		f, err := RenderWidget(ctx, item)
+		if err != nil {
+			return nil, err
+		}
+
+		res[key] = f
+	}
+
+	return res, nil
+}
+
 type Models []Model
 
 func (models Models) Bind(
@@ -343,6 +364,29 @@ func (models Models) IsValid() bool {
 		}
 	}
 	return false
+}
+
+func (models Models) Render(
+	ctx Context,
+) (interface{}, error) {
+	res := make([]interface{}, 0, len(models))
+	for _, model := range models {
+		if model != nil {
+			item, err := model.Render(ctx)
+			if err != nil {
+				return nil, err
+			}
+			if item != nil {
+				res = append(res, item)
+			}
+		}
+	}
+
+	if len(res) == 0 {
+		return nil, nil
+	}
+
+	return res, nil
 }
 
 // Create name of field of band

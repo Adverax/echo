@@ -30,7 +30,7 @@ type NavBar struct {
 func (w *NavBar) Render(ctx echo.Context) (interface{}, error) {
 	res := make(map[string]interface{}, 16)
 	if w.Brand != nil {
-		brand, err := RenderWidget(ctx, w.Brand)
+		brand, err := echo.RenderWidget(ctx, w.Brand)
 		if err != nil {
 			return nil, err
 		}
@@ -72,7 +72,7 @@ func (w *NavBarItem) Render(ctx echo.Context) (interface{}, error) {
 		res["Active"] = true
 	}
 
-	label, err := RenderWidget(ctx, w.Label)
+	label, err := echo.RenderWidget(ctx, w.Label)
 	if err != nil {
 		return nil, err
 	}
@@ -101,7 +101,7 @@ func (w *NavBarDropDown) Render(ctx echo.Context) (interface{}, error) {
 		return nil, nil
 	}
 
-	label, err := RenderWidget(ctx, w.Label)
+	label, err := echo.RenderWidget(ctx, w.Label)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (w *NavBarText) Render(ctx echo.Context) (interface{}, error) {
 	}
 
 	res := make(map[string]interface{}, 16)
-	items, err := RenderWidget(ctx, w.Body)
+	items, err := echo.RenderWidget(ctx, w.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -164,7 +164,7 @@ func (w *NavBarLink) Render(ctx echo.Context) (interface{}, error) {
 	}
 
 	if w.Label != nil {
-		label, err := RenderWidget(ctx, w.Label)
+		label, err := echo.RenderWidget(ctx, w.Label)
 		if err != nil {
 			return nil, err
 		}
@@ -176,7 +176,7 @@ func (w *NavBarLink) Render(ctx echo.Context) (interface{}, error) {
 	}
 
 	if w.Tooltip != nil {
-		tooltip, err := RenderWidget(ctx, w.Tooltip)
+		tooltip, err := echo.RenderWidget(ctx, w.Tooltip)
 		if err != nil {
 			return nil, err
 		}

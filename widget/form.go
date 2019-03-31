@@ -49,7 +49,7 @@ func (w *MultiForm) Render(
 	res := make(map[string]interface{}, 8)
 
 	if len(w.Models) != 0 {
-		model, err := RenderModels(ctx, w.Models)
+		model, err := w.Models.Render(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -101,7 +101,7 @@ func (w *Form) Render(
 	res := make(map[string]interface{}, 8)
 
 	if w.Model != nil {
-		model, err := RenderModel(ctx, w.Model)
+		model, err := w.Model.Render(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -252,7 +252,7 @@ func (field *field) render(
 	}
 
 	if label != nil {
-		label, err := RenderWidget(ctx, label)
+		label, err := echo.RenderWidget(ctx, label)
 		if err != nil {
 			return nil, err
 		}
@@ -389,10 +389,14 @@ func (w *FormText) SetValue(
 
 func (w *FormText) Reset(ctx echo.Context) error {
 	w.field.reset()
-	if w.Default != nil {
+	w.init(ctx)
+	return nil
+}
+
+func (w *FormText) init(ctx echo.Context) {
+	if !w.initialized && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
-	return nil
 }
 
 func (w *FormText) Render(
@@ -401,6 +405,8 @@ func (w *FormText) Render(
 	if w.Hidden {
 		return nil, nil
 	}
+
+	w.init(ctx)
 
 	res, err := w.field.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
@@ -420,7 +426,7 @@ func (w *FormText) Render(
 	}
 
 	if w.Placeholder != nil {
-		placeholder, err := RenderWidget(ctx, w.Placeholder)
+		placeholder, err := echo.RenderWidget(ctx, w.Placeholder)
 		if err != nil {
 			return nil, err
 		}
@@ -512,6 +518,8 @@ func (w *FormSelect) Render(
 		return nil, nil
 	}
 
+	w.init(ctx)
+
 	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
 		return nil, err
@@ -552,10 +560,14 @@ func (w *FormSelect) Render(
 
 func (w *FormSelect) Reset(ctx echo.Context) error {
 	w.field.reset()
-	if w.Default != nil {
+	w.init(ctx)
+	return nil
+}
+
+func (w *FormSelect) init(ctx echo.Context) {
+	if !w.initialized && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
-	return nil
 }
 
 // FormFlag represents single html entity <input tpe="ckeckbox>
@@ -612,6 +624,8 @@ func (w *FormFlag) Render(
 		return nil, nil
 	}
 
+	w.init(ctx)
+
 	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
 		return nil, err
@@ -625,7 +639,7 @@ func (w *FormFlag) Render(
 	res["Value"] = "1"
 
 	if w.Placeholder != nil {
-		placeholder, err := RenderWidget(ctx, w.Placeholder)
+		placeholder, err := echo.RenderWidget(ctx, w.Placeholder)
 		if err != nil {
 			return nil, err
 		}
@@ -637,10 +651,14 @@ func (w *FormFlag) Render(
 
 func (w *FormFlag) Reset(ctx echo.Context) error {
 	w.field.reset()
-	if w.Default != nil {
+	w.init(ctx)
+	return nil
+}
+
+func (w *FormFlag) init(ctx echo.Context) {
+	if !w.initialized && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
-	return nil
 }
 
 // FormFlags represent html entity <input type="checkbox">.
@@ -711,6 +729,8 @@ func (w *FormFlags) Render(
 		return nil, nil
 	}
 
+	w.init(ctx)
+
 	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
 		return nil, err
@@ -728,7 +748,7 @@ func (w *FormFlags) Render(
 	res["Items"] = items
 
 	if w.Placeholder != nil {
-		placeholder, err := RenderWidget(ctx, w.Placeholder)
+		placeholder, err := echo.RenderWidget(ctx, w.Placeholder)
 		if err != nil {
 			return nil, err
 		}
@@ -740,10 +760,14 @@ func (w *FormFlags) Render(
 
 func (w *FormFlags) Reset(ctx echo.Context) error {
 	w.field.reset()
-	if w.Default != nil {
+	w.init(ctx)
+	return nil
+}
+
+func (w *FormFlags) init(ctx echo.Context) {
+	if !w.initialized && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
-	return nil
 }
 
 // FormSubmit represents action Submit
@@ -1074,11 +1098,3 @@ func intersect(as, bs []string) []string {
 
 	return cs
 }
-
-var defaultFlagItems = echo.NewDataSet(
-	map[string]string{
-		"1": "on",
-		"0": "off",
-	},
-	false,
-)

@@ -102,6 +102,11 @@ type Locale interface {
 	DataSet(ctx stdContext.Context, id uint32) (DataSet, error)
 }
 
+// Widget is abstract entity, that generated output data
+type Widget interface {
+	Render(ctx Context) (interface{}, error)
+}
+
 // MessageFamily for active language
 type MessageFamily interface {
 	Fetch(ctx stdContext.Context, id uint32) (string, error)
@@ -310,3 +315,14 @@ var (
 	ValidationErrorInvalidValue  = NewValidationError(MessageInvalidValue)
 	ValidationErrorRequiredValue = NewValidationError(MessageRequiredValue)
 )
+
+func RenderWidget(
+	ctx Context,
+	v interface{},
+) (interface{}, error) {
+	if w, ok := v.(Widget); ok {
+		return w.Render(ctx)
+	}
+
+	return v, nil
+}

@@ -157,7 +157,7 @@ func (stage *MultiStepBaseStage) Consume(
 type MultiStepStageResource struct {
 	MultiStepBaseStage
 	Name    string
-	Content Widget
+	Content echo.Widget
 }
 
 func (stage *MultiStepStageResource) Model(
@@ -192,7 +192,7 @@ func (stage *MultiStepStageResource) Publish(
 		return err
 	}
 
-	content, err := RenderWidget(ctx, stage.Content)
+	content, err := echo.RenderWidget(ctx, stage.Content)
 	if err != nil {
 		return err
 	}

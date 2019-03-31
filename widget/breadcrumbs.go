@@ -39,7 +39,7 @@ func (w Breadcrumbs) Render(
 			continue
 		}
 
-		label, err := RenderWidget(ctx, breadcrumb.Label)
+		label, err := echo.RenderWidget(ctx, breadcrumb.Label)
 		if err != nil {
 			return nil, err
 		}
