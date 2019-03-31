@@ -320,9 +320,10 @@ func RenderWidget(
 	ctx Context,
 	v interface{},
 ) (interface{}, error) {
-	if w, ok := v.(Widget); ok {
+	switch w := v.(type) {
+	case Widget:
 		return w.Render(ctx)
+	default:
+		return v, nil
 	}
-
-	return v, nil
 }

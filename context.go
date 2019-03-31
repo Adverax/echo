@@ -216,6 +216,9 @@ type Context interface {
 
 	// Set active locale
 	SetLocale(locale Locale)
+
+	// Add flash message
+	AddFlash(class FlashClass, message interface{}) error
 }
 
 type context struct {
@@ -706,6 +709,17 @@ func (c *context) Locale() Locale {
 
 func (c *context) SetLocale(locale Locale) {
 	c.locale = locale
+}
+
+func (c *context) AddFlash(class FlashClass, message interface{}) error {
+	msg, err := RenderWidget(c, message)
+	if err != nil {
+		return err
+	}
+
+	c.session.AddFlash(class, msg)
+
+	return nil
 }
 
 var boolMap = map[string]bool{
