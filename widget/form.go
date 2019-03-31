@@ -136,10 +136,9 @@ func (w *Form) Render(
 type FormFieldFilterFunc func(value string) string
 
 type field struct {
-	val         interface{}           // Internal representation of value
-	value       []string              // External representation of value
-	errors      echo.ValidationErrors // Field errors
-	initialized bool                  // Field is initialized
+	val    interface{}           // Internal representation of value
+	value  []string              // External representation of value
+	errors echo.ValidationErrors // Field errors
 }
 
 func (field *field) GetSigned() int64 {
@@ -182,7 +181,6 @@ func (field *field) setVal(
 	codec echo.Codec,
 ) {
 	field.val = value
-	field.initialized = true
 	var val string
 	if codec == nil {
 		val, _ = generic.ConvertToString(value)
@@ -201,7 +199,6 @@ func (field *field) setValue(
 ) error {
 	aValue := simpleValue(value)
 
-	field.initialized = true
 	field.value = []string{aValue}
 	if codec == nil {
 		field.val = aValue
@@ -296,7 +293,6 @@ func (field *field) reset() {
 	field.errors = nil
 	field.value = nil
 	field.val = nil
-	field.initialized = false
 }
 
 func (field *field) validateRequired(value string, required bool) bool {
@@ -394,7 +390,7 @@ func (w *FormText) Reset(ctx echo.Context) error {
 }
 
 func (w *FormText) init(ctx echo.Context) {
-	if !w.initialized && w.Default != nil {
+	if w.val == nil && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
 }
@@ -565,7 +561,7 @@ func (w *FormSelect) Reset(ctx echo.Context) error {
 }
 
 func (w *FormSelect) init(ctx echo.Context) {
-	if !w.initialized && w.Default != nil {
+	if w.val == nil && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
 }
@@ -611,7 +607,6 @@ func (w *FormFlag) SetValue(
 ) error {
 	value = filterValue(w.Filter, value)
 
-	w.initialized = true
 	w.value = value
 	w.val = len(value) != 0 && value[0] == "1"
 	return nil
@@ -656,7 +651,7 @@ func (w *FormFlag) Reset(ctx echo.Context) error {
 }
 
 func (w *FormFlag) init(ctx echo.Context) {
-	if !w.initialized && w.Default != nil {
+	if w.val == nil && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
 }
@@ -693,7 +688,6 @@ func (w *FormFlags) GetHidden() bool {
 }
 
 func (w *FormFlags) SetVal(ctx echo.Context, value interface{}) {
-	w.initialized = true
 	switch v := value.(type) {
 	case []string:
 		w.value = v
@@ -710,7 +704,6 @@ func (w *FormFlags) SetValue(
 ) error {
 	value = filterValue(w.Filter, value)
 
-	w.initialized = true
 	w.value = value
 
 	keys, err := echo.DataSetKeys(ctx, w.Items)
@@ -765,7 +758,7 @@ func (w *FormFlags) Reset(ctx echo.Context) error {
 }
 
 func (w *FormFlags) init(ctx echo.Context) {
-	if !w.initialized && w.Default != nil {
+	if w.val == nil && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
 }
