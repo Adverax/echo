@@ -42,26 +42,18 @@ func myLoginHandler(ctx echo.Context) error {
         Password: "Default password,
 	}
 
-    err := model.AssignFrom(ctx)
+    isImported, err := model.Import(ctx, rec, nil)
     if err != nil {
         return err
     }
-
-    if ctx.Request().Method == echo.POST {
-		err = model.Bind(&data)
+    if isImported {
+		// Record is valid
+		err := model.AssignTo(ctx, &rec)
 		if err != nil {
-		  return err
+			return err
 		}
-
-		if model.IsValid() {
-			// Record is valid
-			err := model.AssignTo(ctx, &rec)
-			if err != nil {
-				return err
-			}
-			...
-			return nil
-		}
+		...
+		return nil
     }
 
 	// Show form
@@ -146,27 +138,46 @@ func (model Model) Clone() Model {
 	return res
 }
 
+// Import and validate data
+func (model Model) Import(
+	ctx Context,
+	src interface{}, // Optional data source
+	mapper Mapper, // Optional mapper
+) (bool, error) {
+	if src != nil {
+		err := model.AssignFrom(ctx, src, mapper)
+		if err != nil {
+			return false, err
+		}
+	}
+
+	if ctx.Request().Method != POST {
+		return false, nil
+	}
+
+	err := model.Bind(ctx)
+	if err != nil {
+		return false, err
+	}
+
+	return model.IsValid(), nil
+}
+
 // Bind works with not structured data only.
 func (model Model) Bind(
 	ctx Context,
 ) error {
 	req := ctx.Request()
 
-	if req.Method == GET {
-		return nil
-	}
-
-	/*
-		if req.ContentLength == 0 {
-			if req.Method == http.MethodGet || req.Method == http.MethodDelete {
-				if err = model.load(ctx, c.QueryParams(), "query"); err != nil {
-					return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
-				}
-				return
+	if req.ContentLength == 0 {
+		if req.Method == http.MethodGet || req.Method == http.MethodDelete {
+			if err := model.BindFrom(ctx, ctx.QueryParams()); err != nil {
+				return NewHTTPError(http.StatusBadRequest, err.Error()).SetInternal(err)
 			}
-			return NewHTTPError(http.StatusBadRequest, "Request body can't be empty")
+			return nil
 		}
-	*/
+		return NewHTTPError(http.StatusBadRequest, "Request body can't be empty")
+	}
 
 	var params map[string][]string
 	ctype := req.Header.Get(HeaderContentType)
