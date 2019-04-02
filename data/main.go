@@ -20,6 +20,7 @@ package data
 import (
 	"context"
 	"errors"
+	"time"
 )
 
 const (
@@ -103,3 +104,8 @@ var (
 	ErrNoMatch         = errors.New("no match")
 	ErrRangeCheckError = errors.New("range check error")
 )
+
+// Current time
+var Now = func() time.Time {
+	return time.Now()
+}
