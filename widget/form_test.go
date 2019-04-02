@@ -184,6 +184,39 @@ func TestFormComponent_SetValueAndValidate(t *testing.T) {
 			val: "123",
 		},
 
+		"FormText: Optional value with codec without data must be accepted": {
+			field: &FormText{
+				Required: false,
+				Codec:    cities,
+			},
+			src: []string{""},
+			dst: []string{""},
+			val: "",
+		},
+
+		"FormText: Optional value with codec with valid data must be accepted": {
+			field: &FormText{
+				Required: false,
+				Codec:    cities,
+			},
+			src: []string{"1"},
+			dst: []string{"1"},
+			val: "1",
+		},
+
+		"FormText: Optional value with codec with invalid data must be rejected": {
+			field: &FormText{
+				Required: false,
+				Codec:    cities,
+			},
+			src: []string{"12345"},
+			dst: []string{"12345"},
+			val: "12345",
+			errors: echo.ValidationErrors{
+				MessageConstraintRequired,
+			},
+		},
+
 		"FormText: Required value without data must be rejected": {
 			field: &FormText{
 				Required: true,
@@ -354,7 +387,7 @@ func TestFormComponent_SetValueAndValidate(t *testing.T) {
 	e := echo.New()
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			//t.Parallel()
+			t.Parallel()
 			c := e.NewContext(nil, nil)
 			err := test.field.SetValue(c, test.src)
 			require.NoError(t, err)

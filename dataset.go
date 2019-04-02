@@ -119,25 +119,25 @@ type Pair struct {
 	Val string
 }
 
-type index []Pair
+type Pairs []Pair
 
-func (index index) Len() int {
-	return len(index)
+func (ps Pairs) Len() int {
+	return len(ps)
 }
 
-func (index index) Less(i, j int) bool {
-	return index[i].Val < index[j].Val
+func (ps Pairs) Less(i, j int) bool {
+	return ps[i].Val < ps[j].Val
 }
 
-func (index index) Swap(i, j int) {
-	index[i], index[j] = index[j], index[i]
+func (ps Pairs) Swap(i, j int) {
+	ps[i], ps[j] = ps[j], ps[i]
 }
 
 // DataSet implementation
 type dataSet struct {
 	encoders map[string]string
 	decoders map[string]string
-	index    index
+	index    Pairs
 }
 
 func (ds *dataSet) Empty(ctx Context) (interface{}, error) {
@@ -196,7 +196,7 @@ func NewDataSet(
 	}
 
 	encoders := make(map[string]string, len(items))
-	index := make(index, 0, len(items))
+	index := make(Pairs, 0, len(items))
 
 	for key, val := range items {
 		encoders[val] = key
@@ -230,7 +230,7 @@ func NewDataSetFromList(
 
 // Create new DataSet from sequence of key/val pairs.
 func NewDataSetFromSequence(
-	items []Pair,
+	items Pairs,
 	sorted bool,
 ) DataSet {
 	if len(items) == 0 {
@@ -239,8 +239,6 @@ func NewDataSetFromSequence(
 
 	encoders := make(map[string]string, len(items))
 	decoders := make(map[string]string, len(items))
-	index := make(index, len(items))
-	copy(index, items)
 
 	for _, item := range items {
 		encoders[item.Val] = item.Key
@@ -248,13 +246,16 @@ func NewDataSetFromSequence(
 	}
 
 	if sorted {
+		index := make(Pairs, len(items))
+		copy(index, items)
 		sort.Sort(index)
+		items = index
 	}
 
 	return &dataSet{
 		decoders: decoders,
 		encoders: encoders,
-		index:    index,
+		index:    items,
 	}
 }
 

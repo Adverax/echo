@@ -175,80 +175,24 @@ func (field *field) GetValue() []string {
 }
 
 // Set internal value of the field
-func (field *field) setVal(
-	ctx echo.Context,
-	value interface{},
-	codec echo.Codec,
-) {
-	field.val = value
-	var val string
-	if codec == nil {
-		val, _ = generic.ConvertToString(value)
-	} else {
-		val, _ = codec.Decode(ctx, value)
-	}
-	field.value = []string{val}
-}
-
-// Set external value of the field.
-// This is prototype, that can be replaced by descendants.
-func (field *field) setValue(
-	ctx echo.Context,
-	value []string,
-	codec echo.Codec,
-) error {
-	aValue := simpleValue(value)
-
-	field.value = []string{aValue}
-	if codec == nil {
-		field.val = aValue
-		return nil
-	}
-
-	val, err := codec.Encode(ctx, aValue)
-	if err == nil {
-		field.val = val
-		return nil
-	}
-
-	switch e := err.(type) {
-	case echo.ValidationError:
-		field.AddError(e)
-	case echo.ValidationErrors:
-		if len(e) == 0 {
-			field.val = val
-		} else {
-			for _, ee := range e {
-				field.AddError(ee)
-			}
-		}
-	default:
-		if err != data.ErrNoMatch {
-			return err
-		}
-
-		field.AddError(echo.ValidationErrorInvalidValue)
-	}
-
-	return nil
-}
-
-// SetVal is sets a internal value of widget.
-// SetVal is prototype for all descendants.
 func (field *field) SetVal(
 	ctx echo.Context,
 	value interface{},
 ) {
-	field.setVal(ctx, value, nil)
+	field.val = value
+	val, _ := generic.ConvertToString(value)
+	field.value = []string{val}
 }
 
-// SetValue is sets a external value of widget.
-// SetValue is prototype for all descendants.
+// Set external value of the field.
 func (field *field) SetValue(
 	ctx echo.Context,
 	value []string,
 ) error {
-	return field.setValue(ctx, value, nil)
+	aValue := simpleValue(value)
+	field.value = []string{aValue}
+	field.val = aValue
+	return nil
 }
 
 // Validate is prototype for all descendants.
@@ -384,7 +328,16 @@ func (w *FormText) GetHidden() bool {
 }
 
 func (w *FormText) SetVal(ctx echo.Context, value interface{}) {
-	w.field.setVal(ctx, value, w.Codec)
+	w.val = value
+	var val string
+	if w.Codec == nil {
+		val, _ = generic.ConvertToString(value)
+	} else {
+		if w.Required || !generic.IsEmpty(value) {
+			val, _ = w.Codec.Decode(ctx, value)
+		}
+	}
+	w.value = []string{val}
 }
 
 func (w *FormText) SetValue(
@@ -396,7 +349,47 @@ func (w *FormText) SetValue(
 	}
 
 	value = filterValue(w.Filter, value)
-	return w.setValue(ctx, value, w.Codec)
+	aValue := simpleValue(value)
+
+	w.value = []string{aValue}
+	if w.Codec == nil {
+		w.val = aValue
+		return nil
+	}
+
+	var val interface{}
+	var err error
+	if !w.Required && aValue == "" {
+		val, _ = w.Codec.Empty(ctx)
+	} else {
+		_, err = w.Codec.Decode(ctx, aValue)
+		val = aValue
+	}
+	if err == nil {
+		w.val = val
+		return nil
+	}
+
+	switch e := err.(type) {
+	case echo.ValidationError:
+		w.AddError(e)
+	case echo.ValidationErrors:
+		if len(e) == 0 {
+			w.val = val
+		} else {
+			for _, ee := range e {
+				w.AddError(ee)
+			}
+		}
+	default:
+		if err != data.ErrNoMatch {
+			return err
+		}
+
+		w.AddError(echo.ValidationErrorInvalidValue)
+	}
+
+	return nil
 }
 
 func (w *FormText) Validate(
@@ -502,16 +495,12 @@ func (w *FormSelect) GetHidden() bool {
 	return w.Hidden
 }
 
-func (w *FormSelect) SetVal(ctx echo.Context, value interface{}) {
-	w.field.setVal(ctx, value, nil)
-}
-
 func (w *FormSelect) SetValue(
 	ctx echo.Context,
 	value []string,
 ) error {
 	value = filterValue(w.Filter, value)
-	return w.setValue(ctx, value, nil)
+	return w.field.SetValue(ctx, value)
 }
 
 func (w *FormSelect) Validate(
@@ -622,7 +611,7 @@ func (w *FormFlag) GetHidden() bool {
 
 func (w *FormFlag) SetVal(ctx echo.Context, value interface{}) {
 	val, _ := generic.ConvertToBoolean(value)
-	w.field.setVal(ctx, val, nil)
+	w.field.SetVal(ctx, val)
 }
 
 func (w *FormFlag) SetValue(
@@ -818,7 +807,7 @@ func (w *FormSubmit) SetValue(
 	value []string,
 ) error {
 	value = filterValue(w.Filter, value)
-	return w.setValue(ctx, value, nil)
+	return w.field.SetValue(ctx, value)
 }
 
 func (w *FormSubmit) Validate(
