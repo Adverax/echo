@@ -302,7 +302,7 @@ func (model Model) AssignFrom(
 				continue
 			}
 			if name, ok := mapper.Execute(field.GetName()); ok {
-				f := rec.FieldByName(name)
+				f := access(rec, name)
 				if f.Kind() != reflect.Invalid {
 					if f.CanInterface() {
 						field.SetVal(ctx, f.Interface())
@@ -335,7 +335,7 @@ func (model Model) AssignTo(
 				continue
 			}
 			if name, ok := mapper.Execute(field.GetName()); ok {
-				f := rec.FieldByName(name)
+				f := access(rec, name)
 				if f.Kind() != reflect.Invalid {
 					if f.CanSet() {
 						dst := f.Addr().Interface()
@@ -428,4 +428,21 @@ func MakeModelParams(raw map[string]string) map[string][]string {
 		params[k] = []string{v}
 	}
 	return params
+}
+
+// Access to field
+func access(rec reflect.Value, name string) reflect.Value {
+	if !strings.Contains(name, ".") {
+		return rec.FieldByName(name)
+	}
+
+	path := strings.Split(name, ".")
+	for _, item := range path {
+		rec = rec.FieldByName(item)
+		if rec.Kind() != reflect.Struct {
+			return rec
+		}
+	}
+
+	return rec
 }

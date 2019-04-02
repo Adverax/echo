@@ -518,7 +518,7 @@ func (w *FormSelect) Validate(
 	ctx echo.Context,
 ) error {
 	value := simpleValue(w.value)
-	if w.validateRequired(value, w.Required) {
+	if w.validateRequired(value, w.Required) && value != "" {
 		_, err := w.Items.Decode(ctx, w.val)
 		if err != nil {
 			if err != data.ErrNoMatch {
@@ -568,7 +568,7 @@ func (w *FormSelect) Render(
 		}
 		empty["Label"] = label
 		value := w.GetValue()
-		selected := len(value) != 0 && value[0] == ""
+		selected := len(value) != 0 && (value[0] == "" || value[0] == "0")
 		if selected {
 			empty["Selected"] = true
 		}

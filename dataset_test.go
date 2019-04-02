@@ -57,9 +57,38 @@ func TestNewDataSet(t *testing.T) {
 	assert.Error(t, err)
 }
 
-func TestParseDataSet(t *testing.T) {
+func TestParseDataSetFromMap(t *testing.T) {
 	ds := ParseDataSet(`
 #! MAP SORTED DELIMITER ::
+1::London
+2::New York
+3::Paris
+`,
+	)
+
+	e := New()
+	ctx := e.NewContext(nil, nil)
+	check := func(key, value string) {
+		_, err := ds.Decode(ctx, key)
+		assert.NoError(t, err)
+	}
+
+	check("1", "London")
+	check("2", "New York")
+	check("3", "Paris")
+
+	v1, err := ds.Decode(ctx, "1")
+	assert.NoError(t, err)
+	assert.Equal(t, "London", v1)
+
+	v2, err := ds.Encode(ctx, "London")
+	assert.NoError(t, err)
+	assert.Equal(t, "1", v2)
+}
+
+func TestParseDataSetFromList(t *testing.T) {
+	ds := ParseDataSet(`
+#! LIST DELIMITER ::
 1::London
 2::New York
 3::Paris

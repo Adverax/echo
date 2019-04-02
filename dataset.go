@@ -114,19 +114,19 @@ type DataSetProvider interface {
 }
 
 // Simple pair of key and value
-type pair struct {
-	key string
-	val string
+type Pair struct {
+	Key string
+	Val string
 }
 
-type index []pair
+type index []Pair
 
 func (index index) Len() int {
 	return len(index)
 }
 
 func (index index) Less(i, j int) bool {
-	return index[i].val < index[j].val
+	return index[i].Val < index[j].Val
 }
 
 func (index index) Swap(i, j int) {
@@ -167,8 +167,8 @@ func (ds *dataSet) Enumerate(
 	action DataSetConsumer,
 ) error {
 	for _, pair := range ds.index {
-		if pair.val != "" {
-			err := action(pair.key, pair.val)
+		if pair.Val != "" {
+			err := action(pair.Key, pair.Val)
 			if err != nil {
 				return nil
 			}
@@ -200,7 +200,7 @@ func NewDataSet(
 
 	for key, val := range items {
 		encoders[val] = key
-		index = append(index, pair{key, val})
+		index = append(index, Pair{key, val})
 	}
 
 	if sorted {
@@ -226,6 +226,36 @@ func NewDataSetFromList(
 	}
 
 	return NewDataSet(m, sorted)
+}
+
+// Create new DataSet from sequence of key/val pairs.
+func NewDataSetFromSequence(
+	items []Pair,
+	sorted bool,
+) DataSet {
+	if len(items) == 0 {
+		return EmptySet
+	}
+
+	encoders := make(map[string]string, len(items))
+	decoders := make(map[string]string, len(items))
+	index := make(index, len(items))
+	copy(index, items)
+
+	for _, item := range items {
+		encoders[item.Val] = item.Key
+		decoders[item.Key] = item.Val
+	}
+
+	if sorted {
+		sort.Sort(index)
+	}
+
+	return &dataSet{
+		decoders: decoders,
+		encoders: encoders,
+		index:    index,
+	}
 }
 
 var EmptySet = NewDataSet(make(map[string]string), false)
@@ -267,14 +297,14 @@ func ParseDataSet(source string) DataSet {
 		lines = parseDataSetSkipSpace(lines[1:])
 		list, sorted, delimiter := parseDataSetHeader(head[2:])
 		if list {
-			return parseDataSetList(lines, sorted)
+			return parseDataSetList(lines, sorted, delimiter)
 		} else {
 			return parseDataSetMap(lines, sorted, delimiter)
 		}
 	}
 
 	lines = parseDataSetSkipSpace(lines)
-	return parseDataSetList(lines, false)
+	return parseDataSetList(lines, false, ":")
 }
 
 func parseDataSetSkipSpace(lines []string) []string {
@@ -318,16 +348,6 @@ func parseDataSetHeader(
 	return list, sorted, delimiter
 }
 
-func parseDataSetList(
-	lines []string,
-	sorted bool,
-) DataSet {
-	if len(lines) == 0 {
-		return EmptySet
-	}
-	return NewDataSetFromList(lines, sorted)
-}
-
 func parseDataSetMap(
 	lines []string,
 	sorted bool,
@@ -338,10 +358,50 @@ func parseDataSetMap(
 	}
 
 	enum := make(map[string]string, len(lines))
+	parseDataSetItems(
+		lines,
+		delimiter,
+		func(key, val string) {
+			enum[key] = val
+		},
+	)
+
+	return NewDataSet(enum, sorted)
+}
+
+func parseDataSetList(
+	lines []string,
+	sorted bool,
+	delimiter string,
+) DataSet {
+	if len(lines) == 0 {
+		return EmptySet
+	}
+
+	enum := make([]Pair, 0, len(lines))
+	parseDataSetItems(
+		lines,
+		delimiter,
+		func(key, val string) {
+			enum = append(enum, Pair{
+				Key: key,
+				Val: val,
+			})
+		},
+	)
+
+	return NewDataSetFromSequence(enum, sorted)
+}
+
+func parseDataSetItems(
+	lines []string,
+	delimiter string,
+	consume func(key, val string),
+) {
 	var key int64 = 1
 	var val string
 	for _, line := range lines {
-		line = strings.TrimSpace(line)
+		line = trimLine(line)
 		pair := strings.SplitN(line, delimiter, 2)
 		if len(pair) == 1 {
 			val = pair[0]
@@ -352,17 +412,19 @@ func parseDataSetMap(
 		} else {
 			k, err := strconv.ParseInt(pair[0], 10, 32)
 			if err != nil {
-				// Skip item
+				// Is not numeric value.
+				consume(pair[0], pair[1])
 				continue
 			}
 			key = k
 			val = pair[1]
 		}
-		enum[strconv.FormatInt(key, 10)] = strings.TrimSpace(val)
+		consume(
+			strconv.FormatInt(key, 10),
+			strings.TrimSpace(val),
+		)
 		key++
 	}
-
-	return NewDataSet(enum, sorted)
 }
 
 func IsPrimitiveDataSet(
@@ -372,6 +434,7 @@ func IsPrimitiveDataSet(
 	return ok
 }
 
+// DataSetKeys returns list of all keys of dataset
 func DataSetKeys(ctx Context, ds DataSet) ([]string, error) {
 	length, err := ds.Length(ctx)
 	if err != nil {
@@ -391,4 +454,14 @@ func DataSetKeys(ctx Context, ds DataSet) ([]string, error) {
 	}
 
 	return keys, nil
+}
+
+// Trim line by deleting comments and white chars.
+func trimLine(line string) string {
+	pair := strings.SplitN(line, "#", 2)
+	if len(pair) > 0 {
+		return strings.TrimSpace(pair[0])
+	}
+
+	return strings.TrimSpace(line)
 }
