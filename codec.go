@@ -311,36 +311,6 @@ func (codec *Decimal) Format(ctx Context, value interface{}) (val interface{}, e
 	return formatDefault(ctx, codec, value)
 }
 
-// Optional is codec for any optional value.
-// Optional is wrapper for inner codec.
-// Example:
-//   codec := &Optional{
-//     Codec: &Signed{},
-//   }
-type Optional struct {
-	Codec
-}
-
-func (codec *Optional) Encode(ctx Context, value string) (interface{}, error) {
-	if value == "" {
-		return codec.Codec.Empty(ctx)
-	}
-
-	return codec.Codec.Encode(ctx, value)
-}
-
-func (codec *Optional) Decode(ctx Context, value interface{}) (string, error) {
-	if generic.IsEmpty(value) {
-		return "", nil
-	}
-
-	return codec.Codec.Decode(ctx, value)
-}
-
-func (codec *Optional) Format(ctx Context, value interface{}) (val interface{}, err error) {
-	return formatDefault(ctx, codec, value)
-}
-
 // Abstract value formatter
 type Formatter interface {
 	Format(ctx Context, value interface{}) (val interface{}, err error)
@@ -422,14 +392,14 @@ func NewPairConverter(codec DataSet) PairConverter {
 }
 
 var (
-	TextCodec             = new(Text)
-	SignedCodec           = new(Signed)
-	UnsignedCodec         = new(Unsigned)
-	DecimalCodec          = new(Decimal)
-	BoolCodec             = new(Unsigned) // Override in real application
-	OptionalSignedCodec   = &Optional{Codec: SignedCodec}
-	OptionalUnsignedCodec = &Optional{Codec: UnsignedCodec}
-	OptionalDecimalCodec  = &Optional{Codec: DecimalCodec}
+	TextCodec                 = new(Text)
+	SignedCodec               = new(Signed)
+	UnsignedCodec             = new(Unsigned)
+	DecimalCodec              = new(Decimal)
+	BoolCodec                 = new(Unsigned) // Override in real application
+	OptionalSignedFormatter   = &OptionalFormatter{Formatter: SignedCodec}
+	OptionalUnsignedFormatter = &OptionalFormatter{Formatter: UnsignedCodec}
+	OptionalDecimalFormatter  = &OptionalFormatter{Formatter: DecimalCodec}
 )
 
 func formatDefault(
