@@ -128,8 +128,6 @@ type ModelField interface {
 
 type ValidatorFunc func() error
 
-type ModelValidator func(me *Model) error
-
 type Model map[string]interface{}
 
 func (model Model) Clone() Model {
@@ -226,6 +224,7 @@ func (model Model) BindFrom(
 	ctx Context,
 	data map[string][]string,
 ) error {
+	// Bind model
 	for _, item := range model {
 		if field, ok := item.(ModelField); ok {
 			err := field.Reset(ctx)
@@ -247,6 +246,16 @@ func (model Model) BindFrom(
 			}
 
 			err = field.Validate(ctx)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
+	// Validate model
+	for _, item := range model {
+		if validator, ok := item.(ValidatorFunc); ok {
+			err := validator()
 			if err != nil {
 				return err
 			}
