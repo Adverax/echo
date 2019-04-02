@@ -271,17 +271,11 @@ var EmptySet = NewDataSet(make(map[string]string), false)
 // The title must begin with "#!".
 // The header consists of attributes (with or without values), separated by spaces.
 // Valid attributes:
-//  * MAP - dictionary required
-//  * LIST - list required
 //  * SORTED - items must be sorted
 //  * DELIMITER - separator for maps (between key and value). Default - ":".
 // Example: #! MAP SORTED DELIMITER ::
 //
-// LIST FORMAT
-// The list has no features. One line - one element.
-// The numbering of elements begins with one.
-//
-// DICTIONARY FORMAT
+// ITEM FORMAT
 // Each element has a format: key: value or just a value.
 // The numbering of elements starts from one (used only if the key is omitted). The next item is max + 1.
 // Blank lines (or "_" lines) have code, but are not displayed.
@@ -296,16 +290,12 @@ func ParseDataSet(source string) DataSet {
 	head := lines[0]
 	if strings.HasPrefix(head, "#!") {
 		lines = parseDataSetSkipSpace(lines[1:])
-		list, sorted, delimiter := parseDataSetHeader(head[2:])
-		if list {
-			return parseDataSetList(lines, sorted, delimiter)
-		} else {
-			return parseDataSetMap(lines, sorted, delimiter)
-		}
+		sorted, delimiter := parseDataSetHeader(head[2:])
+		return parseDataSetSequence(lines, sorted, delimiter)
 	}
 
 	lines = parseDataSetSkipSpace(lines)
-	return parseDataSetList(lines, false, ":")
+	return parseDataSetSequence(lines, false, ":")
 }
 
 func parseDataSetSkipSpace(lines []string) []string {
@@ -319,12 +309,10 @@ func parseDataSetSkipSpace(lines []string) []string {
 func parseDataSetHeader(
 	source string,
 ) (
-	list bool,
 	sorted bool,
 	delimiter string,
 ) {
 	sorted = false
-	list = true
 	delimiter = ":"
 	columns := strings.SplitN(source, "#", 2)
 	items := strings.Split(columns[0], " ")
@@ -332,10 +320,6 @@ func parseDataSetHeader(
 	for ; index < len(items); index++ {
 		item := strings.ToLower(strings.TrimSpace(items[index]))
 		switch item {
-		case "map":
-			list = false
-		case "list":
-			list = true
 		case "sorted":
 			sorted = true
 		case "delimiter":
@@ -346,31 +330,10 @@ func parseDataSetHeader(
 			}
 		}
 	}
-	return list, sorted, delimiter
+	return sorted, delimiter
 }
 
-func parseDataSetMap(
-	lines []string,
-	sorted bool,
-	delimiter string,
-) DataSet {
-	if len(lines) == 0 {
-		return EmptySet
-	}
-
-	enum := make(map[string]string, len(lines))
-	parseDataSetItems(
-		lines,
-		delimiter,
-		func(key, val string) {
-			enum[key] = val
-		},
-	)
-
-	return NewDataSet(enum, sorted)
-}
-
-func parseDataSetList(
+func parseDataSetSequence(
 	lines []string,
 	sorted bool,
 	delimiter string,
