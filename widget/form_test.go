@@ -148,7 +148,7 @@ func TestFormComponent_Render(t *testing.T) {
 	}
 }
 
-func TestFormComponent_SetValue(t *testing.T) {
+func TestFormComponent_SetValueAndValidate(t *testing.T) {
 	type Test struct {
 		// input
 		field echo.ModelField
@@ -168,78 +168,6 @@ func TestFormComponent_SetValue(t *testing.T) {
 	)
 
 	tests := map[string]Test{
-		"FormTextInput: Default must be accepted": {
-			field: &FormText{},
-			src:   []string{"123"},
-			dst:   []string{"123"},
-			val:   "123",
-		},
-
-		"FormTextInput: Required value with data must be accepted": {
-			field: &FormText{
-				Required: true,
-			},
-			src: []string{"123"},
-			dst: []string{"123"},
-			val: "123",
-		},
-
-		"FormTextInput: Required value without data must be rejected": {
-			field: &FormText{
-				Required: true,
-			},
-			dst: []string{""},
-			val: "",
-			errors: echo.ValidationErrors{
-				MessageConstraintRequired,
-			},
-		},
-
-		"FormTextInput: Value matched pattern must be accepted": {
-			field: &FormText{
-				Pattern: "[a-z]+",
-			},
-			src: []string{"abc"},
-			dst: []string{"abc"},
-			val: "abc",
-		},
-
-		"FormTextInput: Value don't matched pattern must be rejected": {
-			field: &FormText{
-				Pattern: "[a-z]+",
-			},
-			src: []string{"123"},
-			dst: []string{"123"},
-			val: "123",
-			errors: echo.ValidationErrors{
-				MessageConstraintPattern,
-			},
-		},
-
-		"FormTextInput: Value with length smaller than allowed must be accepted": {
-			field: &FormText{
-				MaxLength: 64,
-			},
-			src: []string{"12345"},
-			dst: []string{"12345"},
-			val: "12345",
-		},
-
-		"FormTextInput: Too length value must produce error": {
-			field: &FormText{
-				MaxLength: 3,
-			},
-			src: []string{"12345"},
-			dst: []string{"12345"},
-			val: "12345",
-			errors: echo.ValidationErrors{
-				&echo.Cause{
-					Msg:  uint32(MessageConstraintMaxLength),
-					Args: []interface{}{3},
-				},
-			},
-		},
-
 		"FormText: Default must be accepted": {
 			field: &FormText{},
 			src:   []string{"123"},
@@ -406,6 +334,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 				Items:    cities,
 				Required: true,
 			},
+			dst: []string{""},
+			val: "",
 			errors: echo.ValidationErrors{
 				MessageConstraintRequired,
 			},
@@ -419,13 +349,6 @@ func TestFormComponent_SetValue(t *testing.T) {
 			dst: []string{"1", "100"},
 			val: []string{"1"},
 		},
-
-		/*"FormMultiSelect: without dataset": {
-			field: &FormMultiSelect{},
-			src:   []string{"on", "xxx"},
-			dst:   []string{"on", "xxx"},
-			val:   []string{"on"},
-		},*/
 	}
 
 	e := echo.New()
@@ -434,6 +357,8 @@ func TestFormComponent_SetValue(t *testing.T) {
 			//t.Parallel()
 			c := e.NewContext(nil, nil)
 			err := test.field.SetValue(c, test.src)
+			require.NoError(t, err)
+			err = test.field.Validate(c)
 			require.NoError(t, err)
 			require.Equal(t, test.dst, test.field.GetValue(), "Invalid external representation")
 			require.Equal(t, test.val, test.field.GetVal(), "Invalid internal representation")

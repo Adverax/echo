@@ -105,7 +105,8 @@ var (
 	ErrRangeCheckError = errors.New("range check error")
 )
 
-// Current time
+// Current time.
+// Override this function in the debug environment.
 var Now = func() time.Time {
 	return time.Now()
 }

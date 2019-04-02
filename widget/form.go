@@ -191,7 +191,7 @@ func (field *field) setVal(
 }
 
 // Set external value of the field.
-// This is base version, that can be override by descendants.
+// This is prototype, that can be replaced by descendants.
 func (field *field) setValue(
 	ctx echo.Context,
 	value []string,
@@ -230,6 +230,31 @@ func (field *field) setValue(
 		field.AddError(echo.ValidationErrorInvalidValue)
 	}
 
+	return nil
+}
+
+// SetVal is sets a internal value of widget.
+// SetVal is prototype for all descendants.
+func (field *field) SetVal(
+	ctx echo.Context,
+	value interface{},
+) {
+	field.setVal(ctx, value, nil)
+}
+
+// SetValue is sets a external value of widget.
+// SetValue is prototype for all descendants.
+func (field *field) SetValue(
+	ctx echo.Context,
+	value []string,
+) error {
+	return field.setValue(ctx, value, nil)
+}
+
+// Validate is prototype for all descendants.
+func (field *field) Validate(
+	ctx echo.Context,
+) error {
 	return nil
 }
 
@@ -371,15 +396,20 @@ func (w *FormText) SetValue(
 	}
 
 	value = filterValue(w.Filter, value)
-	err := w.setValue(ctx, value, w.Codec)
-	if err != nil {
-		return err
+	return w.setValue(ctx, value, w.Codec)
+}
+
+func (w *FormText) Validate(
+	ctx echo.Context,
+) error {
+	if w.ReadOnly {
+		return nil
 	}
 
-	aValue := simpleValue(value)
-	w.validateRequired(aValue, w.Required)
-	w.validatePattern(aValue, w.Pattern, w.Required)
-	w.validateMaxLength(aValue, w.MaxLength)
+	value := simpleValue(w.value)
+	w.validateRequired(value, w.Required)
+	w.validatePattern(value, w.Pattern, w.Required)
+	w.validateMaxLength(value, w.MaxLength)
 	return nil
 }
 
@@ -480,21 +510,15 @@ func (w *FormSelect) SetValue(
 	ctx echo.Context,
 	value []string,
 ) error {
-	aVal, aValue := w.val, w.value
-	defer func() {
-		if !w.IsValid() {
-			w.val, w.value = aVal, aValue
-		}
-	}()
-
 	value = filterValue(w.Filter, value)
-	err := w.setValue(ctx, value, nil)
-	if err != nil {
-		return err
-	}
+	return w.setValue(ctx, value, nil)
+}
 
-	v := simpleValue(value)
-	if w.validateRequired(v, w.Required) {
+func (w *FormSelect) Validate(
+	ctx echo.Context,
+) error {
+	value := simpleValue(w.value)
+	if w.validateRequired(value, w.Required) {
 		_, err := w.Items.Decode(ctx, w.val)
 		if err != nil {
 			if err != data.ErrNoMatch {
@@ -789,28 +813,18 @@ func (w *FormSubmit) GetHidden() bool {
 	return w.Hidden
 }
 
-func (w *FormSubmit) SetVal(ctx echo.Context, value interface{}) {
-	w.field.setVal(ctx, value, nil)
-}
-
 func (w *FormSubmit) SetValue(
 	ctx echo.Context,
 	value []string,
 ) error {
-	aVal, aValue := w.val, w.value
-	defer func() {
-		if !w.IsValid() {
-			w.val, w.value = aVal, aValue
-		}
-	}()
-
 	value = filterValue(w.Filter, value)
-	err := w.setValue(ctx, value, nil)
-	if err != nil {
-		return err
-	}
+	return w.setValue(ctx, value, nil)
+}
 
-	v := simpleValue(value)
+func (w *FormSubmit) Validate(
+	ctx echo.Context,
+) error {
+	v := simpleValue(w.value)
 	if w.validateRequired(v, w.Required) {
 		_, err := w.Items.Decode(ctx, w.val)
 		if err != nil {
@@ -886,23 +900,13 @@ func (w *FormHidden) GetHidden() bool {
 	return w.Hidden
 }
 
-func (w *FormHidden) SetVal(ctx echo.Context, value interface{}) {
-	w.field.setVal(ctx, value, nil)
-}
-
-func (w *FormHidden) SetValue(
+func (w *FormHidden) Validate(
 	ctx echo.Context,
-	value []string,
 ) error {
-	err := w.field.setValue(ctx, value, nil)
-	if err != nil {
-		return err
-	}
-
-	aValue := simpleValue(value)
-	w.validateRequired(aValue, w.Required)
-	w.validatePattern(aValue, w.Pattern, w.Required)
-	w.validateMaxLength(aValue, w.MaxLength)
+	value := simpleValue(w.value)
+	w.validateRequired(value, w.Required)
+	w.validatePattern(value, w.Pattern, w.Required)
+	w.validateMaxLength(value, w.MaxLength)
 	return nil
 }
 
@@ -958,21 +962,11 @@ func (w *FormFile) GetHidden() bool {
 	return w.Hidden
 }
 
-func (w *FormFile) SetVal(ctx echo.Context, value interface{}) {
-	w.field.setVal(ctx, value, nil)
-}
-
-func (w *FormFile) SetValue(
+func (w *FormFile) Validate(
 	ctx echo.Context,
-	value []string,
 ) error {
-	err := w.field.setValue(ctx, value, nil)
-	if err != nil {
-		return err
-	}
-
-	aValue := simpleValue(value)
-	w.validateRequired(aValue, w.Required)
+	value := simpleValue(w.value)
+	w.validateRequired(value, w.Required)
 	// todo: validate accept filter
 	return nil
 }
@@ -1045,13 +1039,15 @@ func simpleValue(value []string) string {
 }
 
 func filterValue(filter FormFieldFilterFunc, value []string) []string {
-	if filter != nil {
-		for i, val := range value {
-			value[i] = filter(val)
-		}
+	if filter == nil {
+		return value
 	}
 
-	return value
+	res := make([]string, len(value))
+	for i, val := range value {
+		res[i] = filter(val)
+	}
+	return res
 }
 
 func intersect(as, bs []string) []string {

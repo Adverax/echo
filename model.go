@@ -106,6 +106,8 @@ type ModelField interface {
 	GetValue() []string
 	// Set external representation of value
 	SetValue(ctx Context, value []string) error
+	// Validate field and extends field errors
+	Validate(ctx Context) error
 	// Get internal data as signed value
 	GetSigned() int64
 	// Get internal data as unsigned value
@@ -242,6 +244,11 @@ func (model Model) BindFrom(
 				if err != nil {
 					return err
 				}
+			}
+
+			err = field.Validate(ctx)
+			if err != nil {
+				return err
 			}
 		}
 	}
