@@ -218,22 +218,6 @@ func Test_Encode(t *testing.T) {
 			value: "123",
 			error: true,
 		},
-
-		// OPTIONAL
-		/*"OPTIONAL: The valid value must be accepted": {
-			codec: &Optional{
-				Codec: &Signed{},
-			},
-			value:  "123",
-			result: int64(123),
-		},
-		"OPTIONAL: The default value must be accepted": {
-			codec: &Optional{
-				Codec: &Signed{},
-			},
-			value:  "123",
-			result: int64(0),
-		},*/
 	}
 
 	e := New()

@@ -142,7 +142,14 @@ func (g *Group) Group(prefix string, m ...MiddlewareFunc) *Group {
 	return g.echo.Group(g.prefix+prefix, ms...)
 }
 
-// Group creates a new sub-group with prefix and optional sub-group-level middleware.
+// Union creates a new sub-group with prefix and optional sub-group-level middleware.
+// After that, routine calls custom function with this group.
+func (g *Group) Union(fn func(g *Group), m ...MiddlewareFunc) {
+	fn(g.Group("", m...))
+	return
+}
+
+// Route creates a new sub-group with prefix and optional sub-group-level middleware.
 // After that, routine calls custom function with this group.
 func (g *Group) Route(prefix string, fn func(g *Group), m ...MiddlewareFunc) {
 	fn(g.Group(prefix, m...))
