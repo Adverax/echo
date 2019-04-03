@@ -103,15 +103,15 @@ func TestRenderWidget(t *testing.T) {
 			dst: `"Text message"`,
 		},
 		"Signed": {
-			src: SIGNED(123),
+			src: INT(123),
 			dst: `"123"`,
 		},
 		"Unsigned": {
-			src: UNSIGNED(123),
+			src: INT(123),
 			dst: `"123"`,
 		},
 		"Decimal": {
-			src: DECIMAL(123.5),
+			src: FLOAT64(123.5),
 			dst: `"123.5"`,
 		},
 		"MESSAGE": {
@@ -136,7 +136,7 @@ func TestRenderWidget(t *testing.T) {
 		},
 		"Variant": {
 			src: &Variant{
-				Formatter: TextFormatter,
+				Formatter: StringFormatter,
 				Value:     123,
 			},
 			dst: `"123"`,

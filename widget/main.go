@@ -39,12 +39,21 @@ type DataFunc func() (interface{}, error)
 type ExpanderFund func(data map[string]interface{}) error
 
 var (
-	BoolFormatter     echo.Formatter
-	TextFormatter     = &echo.BaseFormatter{Decoder: echo.TextCodec}
-	SignedFormatter   = &echo.BaseFormatter{Decoder: echo.SignedCodec}
-	UnsignedFormatter = &echo.BaseFormatter{Decoder: echo.UnsignedCodec}
-	DecimalFormatter  = &echo.BaseFormatter{Decoder: echo.DecimalCodec}
-	DefaultFormatter  = TextFormatter
+	BoolFormatter    echo.Formatter
+	StringFormatter  = &echo.BaseFormatter{Decoder: echo.StringCodec}
+	IntFormatter     = &echo.BaseFormatter{Decoder: echo.IntCodec}
+	Int8Formatter    = &echo.BaseFormatter{Decoder: echo.Int8Codec}
+	Int16Formatter   = &echo.BaseFormatter{Decoder: echo.Int16Codec}
+	Int32Formatter   = &echo.BaseFormatter{Decoder: echo.Int32Codec}
+	Int64Formatter   = &echo.BaseFormatter{Decoder: echo.Int64Codec}
+	UintFormatter    = &echo.BaseFormatter{Decoder: echo.UintCodec}
+	Uint8Formatter   = &echo.BaseFormatter{Decoder: echo.Uint8Codec}
+	Uint16Formatter  = &echo.BaseFormatter{Decoder: echo.Uint16Codec}
+	Uint32Formatter  = &echo.BaseFormatter{Decoder: echo.Uint32Codec}
+	Uint64Formatter  = &echo.BaseFormatter{Decoder: echo.Uint64Codec}
+	Float32Formatter = &echo.BaseFormatter{Decoder: echo.Float32Codec}
+	Float64Formatter = &echo.BaseFormatter{Decoder: echo.Float64Codec}
+	DefaultFormatter = StringFormatter
 )
 
 var (
@@ -115,7 +124,7 @@ func (w *Optional) Render(ctx echo.Context) (interface{}, error) {
 type TEXT string
 
 func (w TEXT) Render(ctx echo.Context) (interface{}, error) {
-	return TextFormatter.Format(ctx, string(w))
+	return StringFormatter.Format(ctx, string(w))
 }
 
 func (w TEXT) String(ctx echo.Context) (string, error) {
@@ -143,24 +152,87 @@ func (w BOOLEAN) Render(ctx echo.Context) (interface{}, error) {
 }
 
 // Signed integer value
-type SIGNED int64
+type INT int
 
-func (w SIGNED) Render(ctx echo.Context) (interface{}, error) {
-	return SignedFormatter.Format(ctx, int64(w))
+func (w INT) Render(ctx echo.Context) (interface{}, error) {
+	return IntFormatter.Format(ctx, int(w))
+}
+
+// Signed integer value
+type INT8 int8
+
+func (w INT8) Render(ctx echo.Context) (interface{}, error) {
+	return Int8Formatter.Format(ctx, int8(w))
+}
+
+// Signed integer value
+type INT16 int16
+
+func (w INT16) Render(ctx echo.Context) (interface{}, error) {
+	return Int16Formatter.Format(ctx, int16(w))
+}
+
+// Signed integer value
+type INT32 int32
+
+func (w INT32) Render(ctx echo.Context) (interface{}, error) {
+	return Int32Formatter.Format(ctx, int32(w))
+}
+
+// Signed integer value
+type INT64 int64
+
+func (w INT64) Render(ctx echo.Context) (interface{}, error) {
+	return Int64Formatter.Format(ctx, int64(w))
 }
 
 // Unsigned integer value
-type UNSIGNED uint64
+type UINT uint
 
-func (w UNSIGNED) Render(ctx echo.Context) (interface{}, error) {
-	return UnsignedFormatter.Format(ctx, uint64(w))
+func (w UINT) Render(ctx echo.Context) (interface{}, error) {
+	return UintFormatter.Format(ctx, uint(w))
+}
+
+// Unsigned integer value
+type UINT8 uint8
+
+func (w UINT8) Render(ctx echo.Context) (interface{}, error) {
+	return Uint8Formatter.Format(ctx, uint8(w))
+}
+
+// Unsigned integer value
+type UINT16 uint16
+
+func (w UINT16) Render(ctx echo.Context) (interface{}, error) {
+	return Uint16Formatter.Format(ctx, uint16(w))
+}
+
+// Unsigned integer value
+type UINT32 uint32
+
+func (w UINT32) Render(ctx echo.Context) (interface{}, error) {
+	return Uint32Formatter.Format(ctx, uint32(w))
+}
+
+// Unsigned integer value
+type UINT64 uint64
+
+func (w UINT64) Render(ctx echo.Context) (interface{}, error) {
+	return Uint64Formatter.Format(ctx, uint64(w))
 }
 
 // Decimal (float) value
-type DECIMAL float64
+type FLOAT32 float32
 
-func (w DECIMAL) Render(ctx echo.Context) (interface{}, error) {
-	return DecimalFormatter.Format(ctx, float64(w))
+func (w FLOAT32) Render(ctx echo.Context) (interface{}, error) {
+	return Float32Formatter.Format(ctx, float32(w))
+}
+
+// Decimal (float) value
+type FLOAT64 float64
+
+func (w FLOAT64) Render(ctx echo.Context) (interface{}, error) {
+	return Float64Formatter.Format(ctx, float64(w))
 }
 
 // Message

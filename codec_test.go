@@ -36,8 +36,8 @@ func Test_Encode(t *testing.T) {
 	tests := map[string]Test{
 		// TEXT
 		"TEXT: The value matched custom validator's must be accepted": {
-			codec: &Text{
-				Validator: ValidatorTextFunc(
+			codec: &String{
+				Validator: ValidatorStringFunc(
 					func(ctx Context, value string) error {
 						return nil
 					},
@@ -47,8 +47,8 @@ func Test_Encode(t *testing.T) {
 			result: "aaa",
 		},
 		"TEXT: The value don't matched custom validator's must be rejected": {
-			codec: &Text{
-				Validator: ValidatorTextFunc(
+			codec: &String{
+				Validator: ValidatorStringFunc(
 					func(ctx Context, value string) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,
@@ -60,49 +60,49 @@ func Test_Encode(t *testing.T) {
 			error: true,
 		},
 
-		// SIGNED
-		"SIGNED: The invalid value must be rejected": {
-			codec: &Signed{},
+		// INT
+		"INT: The invalid value must be rejected": {
+			codec: &Int{},
 			value: "abcd",
 			error: true,
 		},
-		"SIGNED: The valid value must be accepted": {
-			codec:  &Signed{},
+		"INT: The valid value must be accepted": {
+			codec:  &Int{},
 			value:  "123",
-			result: int64(123),
+			result: int(123),
 		},
-		"SIGNED: The value less than allowed min must be rejected": {
-			codec:  &Signed{Min: 10, Max: 100},
+		"INT: The value less than allowed min must be rejected": {
+			codec:  &Int{Min: 10, Max: 100},
 			value:  "1",
-			result: int64(1),
+			result: int(1),
 			error:  true,
 		},
-		"SIGNED: The value greater than allowed max must be rejected": {
-			codec:  &Signed{Min: 10, Max: 100},
+		"INT: The value greater than allowed max must be rejected": {
+			codec:  &Int{Min: 10, Max: 100},
 			value:  "1000",
-			result: int64(1000),
+			result: int(1000),
 			error:  true,
 		},
-		"SIGNED: The value inside allowed range must be accepted": {
-			codec:  &Signed{Min: 10, Max: 100},
+		"INT: The value inside allowed range must be accepted": {
+			codec:  &Int{Min: 10, Max: 100},
 			value:  "50",
-			result: int64(50),
+			result: int(50),
 		},
-		"SIGNED: The value matched custom validator's must be accepted": {
-			codec: &Signed{
-				Validator: ValidatorSignedFunc(
-					func(ctx Context, value int64) error {
+		"INT: The value matched custom validator's must be accepted": {
+			codec: &Int{
+				Validator: ValidatorIntFunc(
+					func(ctx Context, value int) error {
 						return nil
 					},
 				),
 			},
 			value:  "123",
-			result: int64(123),
+			result: int(123),
 		},
-		"SIGNED: The value don't matched custom validator's must be rejected": {
-			codec: &Signed{
-				Validator: ValidatorSignedFunc(
-					func(ctx Context, value int64) error {
+		"INT: The value don't matched custom validator's must be rejected": {
+			codec: &Int{
+				Validator: ValidatorIntFunc(
+					func(ctx Context, value int) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,
 						}
@@ -113,38 +113,38 @@ func Test_Encode(t *testing.T) {
 			error: true,
 		},
 
-		// UNSIGNED
-		"UNSIGNED: The invalid value must be rejected": {
-			codec: &Unsigned{},
+		// UINT
+		"UINT: The invalid value must be rejected": {
+			codec: &Uint{},
 			value: "abcd",
 			error: true,
 		},
-		"UNSIGNED: The valid value must be accepted": {
-			codec:  &Unsigned{},
+		"UINT: The valid value must be accepted": {
+			codec:  &Uint{},
 			value:  "123",
-			result: uint64(123),
+			result: uint(123),
 		},
-		"UNSIGNED: The value less than allowed min must be rejected": {
-			codec:  &Unsigned{Min: 10, Max: 100},
+		"UINT: The value less than allowed min must be rejected": {
+			codec:  &Uint{Min: 10, Max: 100},
 			value:  "1",
-			result: uint64(1),
+			result: uint(1),
 			error:  true,
 		},
-		"UNSIGNED: The value greater than allowed max must be rejected": {
-			codec:  &Unsigned{Min: 10, Max: 100},
+		"UINT: The value greater than allowed max must be rejected": {
+			codec:  &Uint{Min: 10, Max: 100},
 			value:  "1000",
-			result: uint64(1000),
+			result: uint(1000),
 			error:  true,
 		},
-		"UNSIGNED: The value inside allowed range must be accepted": {
-			codec:  &Unsigned{Min: 10, Max: 100},
+		"UINT: The value inside allowed range must be accepted": {
+			codec:  &Uint{Min: 10, Max: 100},
 			value:  "50",
-			result: uint64(50),
+			result: uint(50),
 		},
-		"UNSIGNED: The value matched custom validator's must be accepted": {
-			codec: &Unsigned{
-				Validator: ValidatorUnsignedFunc(
-					func(ctx Context, value uint64) error {
+		"UINT: The value matched custom validator's must be accepted": {
+			codec: &Uint{
+				Validator: ValidatorUintFunc(
+					func(ctx Context, value uint) error {
 						return nil
 					},
 				),
@@ -152,10 +152,10 @@ func Test_Encode(t *testing.T) {
 			value:  "123",
 			result: uint64(123),
 		},
-		"UNSIGNED: The value don't matched custom validator's must be rejected": {
-			codec: &Unsigned{
-				Validator: ValidatorUnsignedFunc(
-					func(ctx Context, value uint64) error {
+		"UINT: The value don't matched custom validator's must be rejected": {
+			codec: &Uint{
+				Validator: ValidatorUintFunc(
+					func(ctx Context, value uint) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,
 						}
@@ -166,37 +166,37 @@ func Test_Encode(t *testing.T) {
 			error: true,
 		},
 
-		// DECIMAL
-		"DECIMAL: The invalid value must be rejected": {
-			codec: &Decimal{},
+		// FLOAT64
+		"FLOAT64: The invalid value must be rejected": {
+			codec: &Float64{},
 			value: "abcd",
 			error: true,
 		},
-		"DECIMAL: The valid value must be accepted": {
-			codec:  &Decimal{},
+		"FLOAT64: The valid value must be accepted": {
+			codec:  &Float64{},
 			value:  "123.5",
 			result: float64(123.5),
 		},
-		"DECIMAL: The value less than allowed min must be rejected": {
-			codec:  &Decimal{Min: 10, Max: 100},
+		"FLOAT64: The value less than allowed min must be rejected": {
+			codec:  &Float64{Min: 10, Max: 100},
 			value:  "1",
 			result: float64(1),
 			error:  true,
 		},
-		"DECIMAL: The value greater than allowed max must be rejected": {
-			codec:  &Decimal{Min: 10, Max: 100},
+		"FLOAT64: The value greater than allowed max must be rejected": {
+			codec:  &Float64{Min: 10, Max: 100},
 			value:  "1000",
 			result: float64(1000),
 			error:  true,
 		},
-		"DECIMAL: The value inside allowed range must be accepted": {
-			codec:  &Decimal{Min: 10, Max: 100},
+		"FLOAT64: The value inside allowed range must be accepted": {
+			codec:  &Float64{Min: 10, Max: 100},
 			value:  "50",
 			result: float64(50),
 		},
-		"DECIMAL: The value matched custom validator's must be accepted": {
-			codec: &Decimal{
-				Validator: ValidatorDecimalFunc(
+		"FLOAT64: The value matched custom validator's must be accepted": {
+			codec: &Float64{
+				Validator: ValidatorFloat64Func(
 					func(ctx Context, value float64) error {
 						return nil
 					},
@@ -205,9 +205,9 @@ func Test_Encode(t *testing.T) {
 			value:  "123",
 			result: float64(123),
 		},
-		"DECIMAL: The value don't matched custom validator's must be rejected": {
-			codec: &Decimal{
-				Validator: ValidatorDecimalFunc(
+		"FLOAT64: The value don't matched custom validator's must be rejected": {
+			codec: &Float64{
+				Validator: ValidatorFloat64Func(
 					func(ctx Context, value float64) error {
 						return ValidationErrors{
 							ValidationErrorInvalidValue,

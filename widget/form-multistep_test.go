@@ -52,7 +52,7 @@ func (stage *stageAmount) Model(
 ) (echo.Model, error) {
 	amount := &FormText{
 		Name:  "amount",
-		Codec: echo.UnsignedCodec,
+		Codec: echo.UintCodec,
 	}
 
 	return echo.Model{
