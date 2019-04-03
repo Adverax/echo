@@ -60,9 +60,18 @@ type Context interface {
 	// Param returns path parameter by name.
 	Param(name string) string
 	ParamString(name string, defaults string) string
-	ParamSigned(name string, defaults int64) int64
-	ParamUnsigned(name string, defaults uint64) uint64
-	ParamDecimal(name string, defaults float64) float64
+	ParamInt(name string, defaults int) int
+	ParamInt8(name string, defaults int8) int8
+	ParamInt16(name string, defaults int16) int16
+	ParamInt32(name string, defaults int32) int32
+	ParamInt64(name string, defaults int64) int64
+	ParamUint(name string, defaults uint) uint
+	ParamUint8(name string, defaults uint8) uint8
+	ParamUint16(name string, defaults uint16) uint16
+	ParamUint32(name string, defaults uint32) uint32
+	ParamUint64(name string, defaults uint64) uint64
+	ParamFloat32(name string, defaults float32) float32
+	ParamFloat64(name string, defaults float64) float64
 	ParamBoolean(name string, defaults bool) bool
 
 	// ParamNames returns path parameter names.
@@ -320,7 +329,7 @@ func (c *context) ParamString(name string, defaults string) string {
 	return defaults
 }
 
-func (c *context) ParamSigned(name string, defaults int64) int64 {
+func (c *context) ParamInt(name string, defaults int) int {
 	s := c.ParamString(name, "")
 	if s == "" {
 		return defaults
@@ -329,10 +338,58 @@ func (c *context) ParamSigned(name string, defaults int64) int64 {
 	if err != nil {
 		return defaults
 	}
-	return v
+	return int(v)
 }
 
-func (c *context) ParamUnsigned(name string, defaults uint64) uint64 {
+func (c *context) ParamInt8(name string, defaults int8) int8 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return int8(v)
+}
+
+func (c *context) ParamInt16(name string, defaults int16) int16 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return int16(v)
+}
+
+func (c *context) ParamInt32(name string, defaults int32) int32 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return int32(v)
+}
+
+func (c *context) ParamInt64(name string, defaults int64) int64 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseInt(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return int64(v)
+}
+
+func (c *context) ParamUint(name string, defaults uint) uint {
 	s := c.ParamString(name, "")
 	if s == "" {
 		return defaults
@@ -341,10 +398,70 @@ func (c *context) ParamUnsigned(name string, defaults uint64) uint64 {
 	if err != nil {
 		return defaults
 	}
-	return v
+	return uint(v)
 }
 
-func (c *context) ParamDecimal(name string, defaults float64) float64 {
+func (c *context) ParamUint8(name string, defaults uint8) uint8 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return uint8(v)
+}
+
+func (c *context) ParamUint16(name string, defaults uint16) uint16 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return uint16(v)
+}
+
+func (c *context) ParamUint32(name string, defaults uint32) uint32 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return uint32(v)
+}
+
+func (c *context) ParamUint64(name string, defaults uint64) uint64 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseUint(s, 10, 64)
+	if err != nil {
+		return defaults
+	}
+	return uint64(v)
+}
+
+func (c *context) ParamFloat32(name string, defaults float32) float32 {
+	s := c.ParamString(name, "")
+	if s == "" {
+		return defaults
+	}
+	v, err := strconv.ParseFloat(s, 64)
+	if err != nil {
+		return defaults
+	}
+	return float32(v)
+}
+
+func (c *context) ParamFloat64(name string, defaults float64) float64 {
 	s := c.ParamString(name, "")
 	if s == "" {
 		return defaults
