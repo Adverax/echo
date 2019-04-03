@@ -133,6 +133,27 @@ func (ps Pairs) Swap(i, j int) {
 	ps[i], ps[j] = ps[j], ps[i]
 }
 
+// RawPair supports transformation values from interfaces into the strings.
+type RawPair struct {
+	Key string
+	Val interface{}
+}
+
+type RawPairs []RawPair
+
+func (ps RawPairs) Compile(ctx Context) (Pairs, error) {
+	res := make(Pairs, len(ps))
+	for i, p := range ps {
+		val, err := RenderString(ctx, p.Val)
+		if err != nil {
+			return nil, err
+		}
+		res[i].Val = val
+		res[i].Key = p.Key
+	}
+	return res, nil
+}
+
 // DataSet implementation
 type dataSet struct {
 	encoders map[string]string

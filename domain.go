@@ -21,6 +21,7 @@ import (
 	stdContext "context"
 	"encoding/gob"
 	"fmt"
+	"github.com/adverax/echo/generic"
 	"io"
 	"net/url"
 	"time"
@@ -44,6 +45,11 @@ type Flash struct {
 func init() {
 	gob.Register(Flash{})
 	gob.Register(FlashClass(0))
+}
+
+// Entity, that can be converted to plain text
+type Stringer interface {
+	String(ctx Context) (string, error)
 }
 
 // Abstract data storage
@@ -325,5 +331,20 @@ func RenderWidget(
 		return w.Render(ctx)
 	default:
 		return v, nil
+	}
+}
+
+func RenderString(
+	ctx Context,
+	v interface{},
+) (string, error) {
+	switch s := v.(type) {
+	case Stringer:
+		return s.String(ctx)
+	case string:
+		return s, nil
+	default:
+		res, _ := generic.ConvertToString(v)
+		return res, nil
 	}
 }

@@ -38,11 +38,6 @@ type DataFunc func() (interface{}, error)
 
 type ExpanderFund func(data map[string]interface{}) error
 
-// Entity, that can be converted to plain text
-type Stringer interface {
-	String(ctx echo.Context) (string, error)
-}
-
 var (
 	BoolFormatter     echo.Formatter
 	TextFormatter     = &echo.BaseFormatter{Decoder: echo.TextCodec}
@@ -172,7 +167,7 @@ func (w DECIMAL) Render(ctx echo.Context) (interface{}, error) {
 type MESSAGE uint32
 
 func (w MESSAGE) Error() string {
-	return "Validation error: "
+	return "Validation error"
 }
 
 func (w MESSAGE) Render(ctx echo.Context) (interface{}, error) {
@@ -274,6 +269,12 @@ func (w *Format) Render(ctx echo.Context) (interface{}, error) {
 	return msg, nil
 }
 
+func (w *Format) Translate(
+	ctx echo.Context,
+) (string, error) {
+	return w.String(ctx)
+}
+
 func (w *Format) String(ctx echo.Context) (string, error) {
 	if w.Layout == nil {
 		return "", nil
@@ -290,6 +291,10 @@ func (w *Format) String(ctx echo.Context) (string, error) {
 		}
 	}
 	return "", nil
+}
+
+func (w *Format) Error() string {
+	return "Validation error"
 }
 
 // Template with named params
