@@ -21,6 +21,7 @@ import (
 	stdContext "context"
 	"encoding/gob"
 	"fmt"
+	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"io"
 	"net/url"
@@ -106,6 +107,9 @@ type Locale interface {
 	Resource(ctx stdContext.Context, id uint32) (string, error)
 	// Get data source translation into the current language
 	DataSet(ctx stdContext.Context, id uint32) (DataSet, error)
+
+	// Get current time in the location
+	Now() time.Time
 }
 
 // Widget is abstract entity, that generated output data
@@ -189,6 +193,10 @@ func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, erro
 
 func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (DataSet, error) {
 	return loc.DataSets.Fetch(ctx, id)
+}
+
+func (loc *BaseLocale) Now() time.Time {
+	return data.Now().In(loc.Location())
 }
 
 // Validation error can be translated into target language.
