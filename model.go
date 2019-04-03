@@ -109,11 +109,29 @@ type ModelField interface {
 	// Validate field and extends field errors
 	Validate(ctx Context) error
 	// Get internal data as signed value
-	GetSigned() int64
+	GetInt() int
+	// Get internal data as signed value
+	GetInt8() int8
+	// Get internal data as signed value
+	GetInt16() int16
+	// Get internal data as signed value
+	GetInt32() int32
+	// Get internal data as signed value
+	GetInt64() int64
 	// Get internal data as unsigned value
-	GetUnsigned() uint64
+	GetUint() uint
+	// Get internal data as unsigned value
+	GetUint8() uint8
+	// Get internal data as unsigned value
+	GetUint16() uint16
+	// Get internal data as unsigned value
+	GetUint32() uint32
+	// Get internal data as unsigned value
+	GetUint64() uint64
 	// Get internal data as decimal value
-	GetDecimal() float64
+	GetFloat32() float32
+	// Get internal data as decimal value
+	GetFloat64() float64
 	// Get internal data as string value
 	GetString() string
 	// Get internal data as boolean value

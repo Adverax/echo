@@ -141,17 +141,62 @@ type field struct {
 	errors echo.ValidationErrors // Field errors
 }
 
-func (field *field) GetSigned() int64 {
+func (field *field) GetInt() int {
+	res, _ := generic.ConvertToInt(field.val)
+	return res
+}
+
+func (field *field) GetInt8() int8 {
+	res, _ := generic.ConvertToInt8(field.val)
+	return res
+}
+
+func (field *field) GetInt16() int16 {
+	res, _ := generic.ConvertToInt16(field.val)
+	return res
+}
+
+func (field *field) GetInt32() int32 {
+	res, _ := generic.ConvertToInt32(field.val)
+	return res
+}
+
+func (field *field) GetInt64() int64 {
 	res, _ := generic.ConvertToInt64(field.val)
 	return res
 }
 
-func (field *field) GetUnsigned() uint64 {
+func (field *field) GetUint() uint {
+	res, _ := generic.ConvertToUint(field.val)
+	return res
+}
+
+func (field *field) GetUint8() uint8 {
+	res, _ := generic.ConvertToUint8(field.val)
+	return res
+}
+
+func (field *field) GetUint16() uint16 {
+	res, _ := generic.ConvertToUint16(field.val)
+	return res
+}
+
+func (field *field) GetUint32() uint32 {
+	res, _ := generic.ConvertToUint32(field.val)
+	return res
+}
+
+func (field *field) GetUint64() uint64 {
 	res, _ := generic.ConvertToUint64(field.val)
 	return res
 }
 
-func (field *field) GetDecimal() float64 {
+func (field *field) GetFloat32() float32 {
+	res, _ := generic.ConvertToFloat32(field.val)
+	return res
+}
+
+func (field *field) GetFloat64() float64 {
 	res, _ := generic.ConvertToFloat64(field.val)
 	return res
 }
