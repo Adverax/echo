@@ -1,34 +1,43 @@
+// Copyright 2019 Adverax. All Rights Reserved.
+// This file is part of project
+//
+//      http://github.com/adverax/echo
+//
+// Licensed under the MIT (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      https://github.com/adverax/echo/blob/master/LICENSE
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package event
 
 import (
 	"context"
-	"sync"
 )
 
-type (
-	Subscriber func(ctx context.Context, event interface{}) error
+type Subscriber func(ctx context.Context, event interface{}) error
 
-	subscribers []Subscriber
+type subscribers []Subscriber
 
-	Messenger interface {
-		Trigger(ctx context.Context, name string, event interface{}) error
-	}
+type Messenger interface {
+	Trigger(ctx context.Context, name string, event interface{}) error
+}
 
-	Publisher interface {
-		Messenger
-		On(name string, subscriber Subscriber)
-		Off(name string, subscriber *interface{})
-	}
+type Publisher interface {
+	Messenger
+	On(name string, subscriber Subscriber)
+	Off(name string, subscriber *interface{})
+}
 
-	publisher struct {
-		subscribers map[string]subscribers
-	}
-
-	publisherSafe struct {
-		publisher
-		sync.RWMutex
-	}
-)
+type publisher struct {
+	subscribers map[string]subscribers
+}
 
 func (pub *publisher) On(name string, action Subscriber) {
 	if actions, found := pub.subscribers[name]; found {
@@ -61,34 +70,8 @@ func (pub *publisher) Trigger(ctx context.Context, name string, event interface{
 	return nil
 }
 
-func (pub *publisherSafe) On(name string, action Subscriber) {
-	pub.Lock()
-	defer pub.Unlock()
-	pub.publisher.On(name, action)
-}
-
-func (pub *publisherSafe) Off(name string, action *interface{}) {
-	pub.Lock()
-	defer pub.Unlock()
-	pub.publisher.Off(name, action)
-}
-
-func (pub *publisherSafe) Trigger(ctx context.Context, name string, event interface{}) error {
-	pub.RLock()
-	defer pub.RUnlock()
-	return pub.publisher.Trigger(ctx, name, event)
-}
-
 func New() Publisher {
 	return &publisher{
 		subscribers: make(map[string]subscribers, 4),
-	}
-}
-
-func NewSafe() Publisher {
-	return &publisherSafe{
-		publisher: publisher{
-			subscribers: make(map[string]subscribers, 4),
-		},
 	}
 }
