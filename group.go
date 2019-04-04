@@ -24,20 +24,19 @@ type Mux interface {
 	Static(prefix, root string) *Route
 	File(path, file string, m ...MiddlewareFunc) *Route
 	Add(method, path string, h HandlerFunc, m ...MiddlewareFunc) *Route
-	Group(prefix string, m ...MiddlewareFunc) (g *Group)
-	Route(prefix string, fn func(g *Group), m ...MiddlewareFunc)
+	Group(prefix string, m ...MiddlewareFunc) Mux
+	Union(fn func(mux Mux), m ...MiddlewareFunc)
+	Route(prefix string, fn func(mux Mux), m ...MiddlewareFunc)
 }
 
-type (
-	// Group is a set of sub-routes for a specified route. It can be used for inner
-	// routes that share a common middleware or functionality that should be separate
-	// from the parent echo instance while still inheriting from it.
-	Group struct {
-		prefix     string
-		middleware []MiddlewareFunc
-		echo       *Echo
-	}
-)
+// Group is a set of sub-routes for a specified route. It can be used for inner
+// routes that share a common middleware or functionality that should be separate
+// from the parent echo instance while still inheriting from it.
+type Group struct {
+	prefix     string
+	middleware []MiddlewareFunc
+	echo       *Echo
+}
 
 // Pre implements `Echo#pre()` for sub-routes within the Group.
 func (g *Group) Pre(middleware ...MiddlewareFunc) {
@@ -135,7 +134,7 @@ func (g *Group) Match(methods []string, path string, h HandlerFunc, m ...Middlew
 }
 
 // Group creates a new sub-group with prefix and optional sub-group-level middleware.
-func (g *Group) Group(prefix string, m ...MiddlewareFunc) *Group {
+func (g *Group) Group(prefix string, m ...MiddlewareFunc) Mux {
 	ms := make([]MiddlewareFunc, 0, len(g.middleware)+len(m))
 	ms = append(ms, g.middleware...)
 	ms = append(ms, m...)
@@ -144,14 +143,14 @@ func (g *Group) Group(prefix string, m ...MiddlewareFunc) *Group {
 
 // Union creates a new sub-group with prefix and optional sub-group-level middleware.
 // After that, routine calls custom function with this group.
-func (g *Group) Union(fn func(g *Group), m ...MiddlewareFunc) {
+func (g *Group) Union(fn func(mux Mux), m ...MiddlewareFunc) {
 	fn(g.Group("", m...))
 	return
 }
 
 // Route creates a new sub-group with prefix and optional sub-group-level middleware.
 // After that, routine calls custom function with this group.
-func (g *Group) Route(prefix string, fn func(g *Group), m ...MiddlewareFunc) {
+func (g *Group) Route(prefix string, fn func(mux Mux), m ...MiddlewareFunc) {
 	fn(g.Group(prefix, m...))
 	return
 }
