@@ -97,6 +97,8 @@ type MultiStepStage interface {
 	Model(ctx echo.Context, state *MultiStepState) (echo.Model, error)
 	// Publish model
 	Publish(ctx echo.Context, state *MultiStepState, model echo.Model) error
+	// Import data into the model
+	Import(ctx echo.Context, state *MultiStepState, model echo.Model) (bool, error)
 	// Consume stage data. Return new state reference or nil (see method MultiStepState.Become)
 	Consume(ctx echo.Context, state *MultiStepState, data interface{}) (reply interface{}, err error)
 }
@@ -113,6 +115,14 @@ var MultiStepNextBtn = &Action{
 type MultiStepBaseStage struct {
 	PrevBtn *Action
 	NextBtn *Action
+}
+
+func (stage *MultiStepBaseStage) Import(
+	ctx echo.Context,
+	state *MultiStepState,
+	model echo.Model,
+) (bool, error) {
+	return model.Import(ctx, nil, nil)
 }
 
 func (stage *MultiStepBaseStage) Publish(
@@ -310,11 +320,12 @@ func (w *MultiStepForm) Execute(
 
 	// Load and validate date
 	if request.Method == http.MethodPost {
-		err = model.Bind(ctx)
+		var isImported bool
+		isImported, err = stage.Import(ctx, state, model)
 		if err != nil {
 			return
 		}
-		if model.IsValid() {
+		if isImported {
 			// Store state
 			for _, item := range model {
 				if field, ok := item.(echo.ModelField); ok {
