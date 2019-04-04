@@ -507,7 +507,7 @@ func (e *Echo) Add(method, path string, handler HandlerFunc, middleware ...Middl
 
 // Group creates a new router group with prefix and optional group-level middleware.
 func (e *Echo) Group(prefix string, m ...MiddlewareFunc) Mux {
-	mux := &Group{prefix: prefix, echo: e}
+	mux := &group{prefix: prefix, echo: e}
 	mux.Use(m...)
 	return mux
 }
