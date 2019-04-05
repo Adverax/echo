@@ -327,13 +327,13 @@ func (w HTML) Render(ctx echo.Context) (interface{}, error) {
 	return template.HTML(w), nil
 }
 
-// Format by layout (using fmt.SprintF)
-type Format struct {
+// MessageFmt by layout (using fmt.SprintF)
+type MessageFmt struct {
 	Layout interface{}   // Layout
-	Args   []interface{} // Message parameters
+	Params []interface{} // Message parameters
 }
 
-func (w *Format) Render(ctx echo.Context) (interface{}, error) {
+func (w *MessageFmt) Render(ctx echo.Context) (interface{}, error) {
 	msg, err := w.String(ctx)
 	if err != nil {
 		return nil, err
@@ -341,13 +341,13 @@ func (w *Format) Render(ctx echo.Context) (interface{}, error) {
 	return msg, nil
 }
 
-func (w *Format) Translate(
+func (w *MessageFmt) Translate(
 	ctx echo.Context,
 ) (string, error) {
 	return w.String(ctx)
 }
 
-func (w *Format) String(ctx echo.Context) (string, error) {
+func (w *MessageFmt) String(ctx echo.Context) (string, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
@@ -356,27 +356,27 @@ func (w *Format) String(ctx echo.Context) (string, error) {
 		return "", err
 	}
 	if layout, ok := generic.ConvertToString(val); ok {
-		if len(w.Args) == 0 {
+		if len(w.Params) == 0 {
 			return layout, nil
 		} else {
-			return fmt.Sprintf(layout, w.Args...), nil
+			return fmt.Sprintf(layout, w.Params...), nil
 		}
 	}
 	return "", nil
 }
 
-func (w *Format) Error() string {
+func (w *MessageFmt) Error() string {
 	return "Validation error"
 }
 
-// Template with named params
-// Layout can used params like this: {{name@param}}
-type Template struct {
-	Layout interface{}    // Layout
-	Params generic.Params // Message arguments
+// Document is layout with complex named params
+type Document struct {
+	Layout  interface{}    // Layout
+	Pattern string         // RegEx pattern for replace params (default {{name@param}})
+	Params  generic.Params // Message arguments
 }
 
-func (w *Template) Render(ctx echo.Context) (interface{}, error) {
+func (w *Document) Render(ctx echo.Context) (interface{}, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
@@ -390,17 +390,28 @@ func (w *Template) Render(ctx echo.Context) (interface{}, error) {
 	return "", nil
 }
 
-func (w *Template) renderParams(ctx echo.Context, code string) (interface{}, error) {
+func (w *Document) renderParams(ctx echo.Context, code string) (interface{}, error) {
 	if len(w.Params) == 0 {
 		return code, nil
 	}
 
 	var firstErr error
 
-	code2 := DocumentParamRe.ReplaceAllStringFunc(
+	var re *regexp.Regexp
+	if w.Pattern == "" {
+		re = DefaultParamRe
+	} else {
+		var err error
+		re, err = regexp.Compile(w.Pattern)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	code2 := re.ReplaceAllStringFunc(
 		string(code),
 		func(s string) string {
-			matches := DocumentParamRe.FindStringSubmatch(s)
+			matches := DefaultParamRe.FindStringSubmatch(s)
 			if matches != nil {
 				name := matches[1]
 				value, ok := w.Params[name]
@@ -436,6 +447,8 @@ func (w *Template) renderParams(ctx echo.Context, code string) (interface{}, err
 	return template.HTML(code2), nil
 }
 
+var DefaultParamRe = regexp.MustCompile(`(?i:{{\s*([\w\d.\-]+)\s*}})`)
+
 // Any value with formatter
 type Variant struct {
 	echo.Formatter
@@ -455,8 +468,6 @@ func (w *Variant) Render(ctx echo.Context) (interface{}, error) {
 
 	return val, nil
 }
-
-var DocumentParamRe = regexp.MustCompile(`(?i:{{\s*([\w\d.\-]+)@param\s*}})`)
 
 func RenderParams(
 	ctx echo.Context,

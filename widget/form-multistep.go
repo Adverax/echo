@@ -100,7 +100,7 @@ type MultiStepStage interface {
 	// Import data into the model
 	Import(ctx echo.Context, state *MultiStepState, model echo.Model) (bool, error)
 	// Consume stage data. Return new state reference or nil (see method MultiStepState.Become)
-	Consume(ctx echo.Context, state *MultiStepState, data interface{}) (reply interface{}, err error)
+	Consume(ctx echo.Context, state *MultiStepState, model echo.Model) (reply interface{}, err error)
 }
 
 var MultiStepPrevBtn = &Action{
@@ -159,56 +159,9 @@ func (stage *MultiStepBaseStage) Publish(
 func (stage *MultiStepBaseStage) Consume(
 	ctx echo.Context,
 	state *MultiStepState,
-	data interface{},
-) (reply interface{}, err error) {
-	return nil, nil
-}
-
-type MultiStepStageResource struct {
-	MultiStepBaseStage
-	Name    string
-	Content echo.Widget
-}
-
-func (stage *MultiStepStageResource) Model(
-	ctx echo.Context,
-	state *MultiStepState,
-) (echo.Model, error) {
-	accepted := &FormHidden{
-		Name:     stage.Name,
-		Required: true,
-	}
-
-	return echo.Model{
-		"Accepted": accepted,
-	}, nil
-}
-
-func (stage *MultiStepStageResource) Consume(
-	ctx echo.Context,
-	state *MultiStepState,
-	data interface{},
-) (reply interface{}, err error) {
-	return nil, nil
-}
-
-func (stage *MultiStepStageResource) Publish(
-	ctx echo.Context,
-	state *MultiStepState,
 	model echo.Model,
-) error {
-	err := stage.MultiStepBaseStage.Publish(ctx, state, model)
-	if err != nil {
-		return err
-	}
-
-	content, err := echo.RenderWidget(ctx, stage.Content)
-	if err != nil {
-		return err
-	}
-	model["Content"] = content
-
-	return nil
+) (reply interface{}, err error) {
+	return nil, nil
 }
 
 type MultiStepStrategy interface {

@@ -36,7 +36,7 @@ func (stage *stageBank) Model(
 func (stage *stageBank) Consume(
 	ctx echo.Context,
 	state *MultiStepState,
-	data interface{},
+	model echo.Model,
 ) (reply interface{}, err error) {
 	return "amount", nil
 }
@@ -63,7 +63,7 @@ func (stage *stageAmount) Model(
 func (stage *stageAmount) Consume(
 	ctx echo.Context,
 	state *MultiStepState,
-	data interface{},
+	model echo.Model,
 ) (reply interface{}, err error) {
 	stage.result = state.Params
 	return nil, ctx.Redirect(http.StatusSeeOther, "/index")

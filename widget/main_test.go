@@ -119,15 +119,15 @@ func TestRenderWidget(t *testing.T) {
 			dst: `"Next"`,
 		},
 		"Format": {
-			src: &Format{
+			src: &MessageFmt{
 				Layout: MessageListRecords,
-				Args:   []interface{}{1, 2, 3},
+				Params: []interface{}{1, 2, 3},
 			},
 			dst: `"Shows rows from 1 to 2 of 3"`,
 		},
 		"Template": {
-			src: &Template{
-				Layout: "Hello, {{name@param}}",
+			src: &Document{
+				Layout: "Hello, {{name}}",
 				Params: generic.Params{
 					"name": "Bob",
 				},

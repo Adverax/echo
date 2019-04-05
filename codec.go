@@ -1085,32 +1085,32 @@ func NewPairConverter(codec DataSet) PairConverter {
 }
 
 var (
-	StringCodec              = new(String)
-	IntCodec                 = new(Int)
-	Int8Codec                = new(Int8)
-	Int16Codec               = new(Int16)
-	Int32Codec               = new(Int32)
-	Int64Codec               = new(Int64)
-	UintCodec                = new(Uint)
-	Uint8Codec               = new(Uint8)
-	Uint16Codec              = new(Uint16)
-	Uint32Codec              = new(Uint32)
-	Uint64Codec              = new(Uint64)
-	Float32Codec             = new(Float32)
-	Float64Codec             = new(Float64)
-	BoolCodec                = new(Uint) // Override in real application
-	OptionalIntFormatter     = &OptionalFormatter{Formatter: IntCodec}
-	OptionalInt8Formatter    = &OptionalFormatter{Formatter: Int8Codec}
-	OptionalInt16Formatter   = &OptionalFormatter{Formatter: Int16Codec}
-	OptionalInt32Formatter   = &OptionalFormatter{Formatter: Int32Codec}
-	OptionalInt64Formatter   = &OptionalFormatter{Formatter: Int64Codec}
-	OptionalUintFormatter    = &OptionalFormatter{Formatter: UintCodec}
-	OptionalUint8Formatter   = &OptionalFormatter{Formatter: Uint8Codec}
-	OptionalUint16Formatter  = &OptionalFormatter{Formatter: Uint16Codec}
-	OptionalUint32Formatter  = &OptionalFormatter{Formatter: Uint32Codec}
-	OptionalUint64Formatter  = &OptionalFormatter{Formatter: Uint64Codec}
-	OptionalFloat32Formatter = &OptionalFormatter{Formatter: Float32Codec}
-	OptionalFloat64Formatter = &OptionalFormatter{Formatter: Float64Codec}
+	StringCodec                    = new(String)
+	IntCodec                       = new(Int)
+	Int8Codec                      = new(Int8)
+	Int16Codec                     = new(Int16)
+	Int32Codec                     = new(Int32)
+	Int64Codec                     = new(Int64)
+	UintCodec                      = new(Uint)
+	Uint8Codec                     = new(Uint8)
+	Uint16Codec                    = new(Uint16)
+	Uint32Codec                    = new(Uint32)
+	Uint64Codec                    = new(Uint64)
+	Float32Codec                   = new(Float32)
+	Float64Codec                   = new(Float64)
+	BoolCodec                Codec = new(Uint) // Override in real application
+	OptionalIntFormatter           = &OptionalFormatter{Formatter: IntCodec}
+	OptionalInt8Formatter          = &OptionalFormatter{Formatter: Int8Codec}
+	OptionalInt16Formatter         = &OptionalFormatter{Formatter: Int16Codec}
+	OptionalInt32Formatter         = &OptionalFormatter{Formatter: Int32Codec}
+	OptionalInt64Formatter         = &OptionalFormatter{Formatter: Int64Codec}
+	OptionalUintFormatter          = &OptionalFormatter{Formatter: UintCodec}
+	OptionalUint8Formatter         = &OptionalFormatter{Formatter: Uint8Codec}
+	OptionalUint16Formatter        = &OptionalFormatter{Formatter: Uint16Codec}
+	OptionalUint32Formatter        = &OptionalFormatter{Formatter: Uint32Codec}
+	OptionalUint64Formatter        = &OptionalFormatter{Formatter: Uint64Codec}
+	OptionalFloat32Formatter       = &OptionalFormatter{Formatter: Float32Codec}
+	OptionalFloat64Formatter       = &OptionalFormatter{Formatter: Float64Codec}
 )
 
 func formatDefault(
