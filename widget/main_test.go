@@ -22,6 +22,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"net/url"
 	"testing"
 
@@ -125,14 +126,23 @@ func TestRenderWidget(t *testing.T) {
 			},
 			dst: `"Shows rows from 1 to 2 of 3"`,
 		},
-		"Template": {
+		"Document": {
 			src: &Document{
 				Layout: "Hello, {{name}}",
 				Params: generic.Params{
 					"name": "Bob",
 				},
 			},
-			dst: `"Hello, Bob"`,
+			dst: "Hello, Bob",
+		},
+		"References": {
+			src: &References{
+				Layout: "Hello, [Bob](name)",
+				Refs: map[string]interface{}{
+					"name": "google.com",
+				},
+			},
+			dst: "Hello, <a href=\"google.com\">Bob</a>",
 		},
 		"Variant": {
 			src: &Variant{
@@ -417,9 +427,16 @@ func TestRenderWidget(t *testing.T) {
 			c := e.NewContext(nil, nil)
 			tree, err := echo.RenderWidget(c, test.src)
 			require.NoError(t, err)
-			dst, err := json.Marshal(tree)
-			require.NoError(t, err)
-			require.Equal(t, test.dst, string(dst))
+
+			var dst string
+			if v, ok := tree.(template.HTML); ok {
+				dst = string(v)
+			} else {
+				res, err := json.Marshal(tree)
+				require.NoError(t, err)
+				dst = string(res)
+			}
+			require.Equal(t, test.dst, dst)
 		})
 	}
 }

@@ -21,13 +21,13 @@ import (
 	"fmt"
 	"html"
 	"html/template"
+	"net/url"
 	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/adverax/echo"
 	"github.com/adverax/echo/generic"
-	"net/url"
 )
 
 type GuidMaker interface {
@@ -327,7 +327,7 @@ func (w HTML) Render(ctx echo.Context) (interface{}, error) {
 	return template.HTML(w), nil
 }
 
-// Sprintf by layout (using fmt.Sprintf)
+// Sprintf is util for format layout (using fmt.Sprintf)
 type Sprintf struct {
 	Layout interface{}   // Layout
 	Params []interface{} // Message parameters
@@ -351,29 +351,24 @@ func (w *Sprintf) String(ctx echo.Context) (string, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
-	val, err := echo.RenderWidget(ctx, w.Layout)
-	if err != nil {
-		return "", err
+
+	layout, err := RenderString(ctx, w.Layout)
+	if err != nil || layout == "" || len(w.Params) == 0 {
+		return layout, err
 	}
-	if layout, ok := generic.ConvertToString(val); ok {
-		if len(w.Params) == 0 {
-			return layout, nil
-		} else {
-			return fmt.Sprintf(layout, w.Params...), nil
-		}
-	}
-	return "", nil
+
+	return fmt.Sprintf(layout, w.Params...), nil
 }
 
 func (w *Sprintf) Error() string {
 	return "Validation error"
 }
 
-// Document is layout with complex named params
+// Document is util for format with complex named params.
 type Document struct {
 	Layout  interface{}    // Layout
 	Params  generic.Params // Message arguments
-	Pattern string         // RegEx pattern for replace params (default {{name@param}})
+	Pattern *regexp.Regexp // RegEx pattern for replace params (default {{name@param}})
 }
 
 func (w *Document) Render(ctx echo.Context) (interface{}, error) {
@@ -397,21 +392,15 @@ func (w *Document) renderParams(ctx echo.Context, code string) (interface{}, err
 
 	var firstErr error
 
-	var re *regexp.Regexp
-	if w.Pattern == "" {
-		re = DefaultParamRe
-	} else {
-		var err error
-		re, err = regexp.Compile(w.Pattern)
-		if err != nil {
-			return nil, err
-		}
+	re := w.Pattern
+	if re == nil {
+		re = DefaultDocumentParamRe
 	}
 
 	code2 := re.ReplaceAllStringFunc(
 		string(code),
 		func(s string) string {
-			matches := DefaultParamRe.FindStringSubmatch(s)
+			matches := re.FindStringSubmatch(s)
 			if matches != nil {
 				name := matches[1]
 				value, ok := w.Params[name]
@@ -447,7 +436,63 @@ func (w *Document) renderParams(ctx echo.Context, code string) (interface{}, err
 	return template.HTML(code2), nil
 }
 
-var DefaultParamRe = regexp.MustCompile(`(?i:{{\s*([\w\d.\-]+)\s*}})`)
+var DefaultDocumentParamRe = regexp.MustCompile(`(?i:{{\s*([\w\d.\-]+)\s*}})`)
+
+// References is layout with embedded links via pattern [label](name)
+type References struct {
+	Layout interface{}            // Source text
+	Refs   map[string]interface{} // Map of hyperlinks name->action
+}
+
+func (w *References) Render(ctx echo.Context) (interface{}, error) {
+	layout, err := RenderString(ctx, w.Layout)
+	if err != nil || layout == "" || len(w.Refs) == 0 {
+		return layout, err
+	}
+
+	pairs := linkedTextRe.FindAllStringIndex(layout, 1000)
+	if pairs == nil {
+		return layout, nil
+	}
+
+	var pos int
+	var result string
+	for _, pair := range pairs {
+		src := pair[0]
+		dst := pair[1]
+		if pos < src {
+			result += html.EscapeString(layout[pos:src])
+			pos = src
+		}
+		frame := layout[src:dst]
+		items := linkedTextRe.FindStringSubmatch(frame)
+		if ref, found := w.Refs[items[2]]; found {
+			r, err := RenderLink(ctx, ref)
+			if err != nil {
+				return nil, err
+			}
+			url2, err := escapeUrl(r)
+			if err != nil {
+				return nil, err
+			}
+			result += `<a href="` + string(url2) + `">` + html.EscapeString(items[1]) + `</a>`
+		} else {
+			result += html.EscapeString(frame)
+		}
+		pos = dst
+	}
+
+	src := len(layout)
+	if pos < src {
+		result += html.EscapeString(layout[pos:src])
+	}
+
+	return template.HTML(result), nil
+}
+
+var (
+	linkedTextRe = regexp.MustCompile(`\[([^]]+)]\(([a-z0-9]+)\)`)
+)
 
 // Any value with formatter
 type Variant struct {
@@ -567,7 +612,10 @@ func RenderValidationErrors(
 }
 
 // Render link without escape
-func RenderLink(ctx echo.Context, v interface{}) (string, error) {
+func RenderLink(
+	ctx echo.Context,
+	v interface{},
+) (string, error) {
 	switch val := v.(type) {
 	case string:
 		return val, nil
@@ -578,6 +626,27 @@ func RenderLink(ctx echo.Context, v interface{}) (string, error) {
 	default:
 		return "", nil
 	}
+}
+
+// Render interface as string
+func RenderString(
+	ctx echo.Context,
+	v interface{},
+) (string, error) {
+	if v == nil {
+		return "", nil
+	}
+
+	val, err := echo.RenderWidget(ctx, v)
+	if err != nil {
+		return "", err
+	}
+
+	if layout, ok := generic.ConvertToString(val); ok {
+		return layout, nil
+	}
+
+	return "", nil
 }
 
 func RenderDataSet(
