@@ -327,13 +327,13 @@ func (w HTML) Render(ctx echo.Context) (interface{}, error) {
 	return template.HTML(w), nil
 }
 
-// MessageFmt by layout (using fmt.SprintF)
-type MessageFmt struct {
+// Sprintf by layout (using fmt.Sprintf)
+type Sprintf struct {
 	Layout interface{}   // Layout
 	Params []interface{} // Message parameters
 }
 
-func (w *MessageFmt) Render(ctx echo.Context) (interface{}, error) {
+func (w *Sprintf) Render(ctx echo.Context) (interface{}, error) {
 	msg, err := w.String(ctx)
 	if err != nil {
 		return nil, err
@@ -341,13 +341,13 @@ func (w *MessageFmt) Render(ctx echo.Context) (interface{}, error) {
 	return msg, nil
 }
 
-func (w *MessageFmt) Translate(
+func (w *Sprintf) Translate(
 	ctx echo.Context,
 ) (string, error) {
 	return w.String(ctx)
 }
 
-func (w *MessageFmt) String(ctx echo.Context) (string, error) {
+func (w *Sprintf) String(ctx echo.Context) (string, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
@@ -365,15 +365,15 @@ func (w *MessageFmt) String(ctx echo.Context) (string, error) {
 	return "", nil
 }
 
-func (w *MessageFmt) Error() string {
+func (w *Sprintf) Error() string {
 	return "Validation error"
 }
 
 // Document is layout with complex named params
 type Document struct {
 	Layout  interface{}    // Layout
-	Pattern string         // RegEx pattern for replace params (default {{name@param}})
 	Params  generic.Params // Message arguments
+	Pattern string         // RegEx pattern for replace params (default {{name@param}})
 }
 
 func (w *Document) Render(ctx echo.Context) (interface{}, error) {

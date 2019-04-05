@@ -118,8 +118,8 @@ func TestRenderWidget(t *testing.T) {
 			src: MessagePagerNext,
 			dst: `"Next"`,
 		},
-		"Format": {
-			src: &MessageFmt{
+		"Sprintf": {
+			src: &Sprintf{
 				Layout: MessageListRecords,
 				Params: []interface{}{1, 2, 3},
 			},
