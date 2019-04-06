@@ -64,7 +64,7 @@ type (
 		premiddleware    []MiddlewareFunc
 		middleware       []MiddlewareFunc
 		maxParam         *int
-		router           *Router
+		router           Router
 		notFoundHandler  HandlerFunc
 		roots            sync.Pool
 		Server           *http.Server
@@ -88,11 +88,11 @@ type (
 	}
 
 	// Route contains a handler and information for matching against requests.
-	Route struct {
+	/*Route struct {
 		Method string `json:"method"`
 		Path   string `json:"path"`
 		Name   string `json:"name"`
-	}
+	}*/
 
 	// HTTPError represents an error that occurred while handling a request.
 	HTTPError struct {
@@ -298,7 +298,7 @@ func New() (e *Echo) {
 	e.roots.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
-	e.router = NewRouter(e)
+	e.router = NewRouter()
 	return
 }
 
@@ -318,7 +318,7 @@ func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
 }
 
 // Router returns router.
-func (e *Echo) Router() *Router {
+func (e *Echo) Router() Router {
 	return e.router
 }
 
@@ -358,6 +358,7 @@ func (e *Echo) DefaultHTTPErrorHandler(err error, c Context) {
 	}
 }
 
+/*
 // Pre adds middleware to the chain which is run before router.
 func (e *Echo) Pre(middleware ...MiddlewareFunc) {
 	e.premiddleware = append(e.premiddleware, middleware...)
@@ -525,9 +526,10 @@ func (e *Echo) Route(prefix string, fn func(mux Mux), middleware ...MiddlewareFu
 	fn(e.Group(prefix, middleware...))
 	return
 }
+*/
 
 // URI generates a URI from handler.
-func (e *Echo) URI(handler HandlerFunc, params ...interface{}) string {
+/*func (e *Echo) URI(handler HandlerFunc, params ...interface{}) string {
 	name := handlerName(handler)
 	return e.Reverse(name, params...)
 }
@@ -538,7 +540,7 @@ func (e *Echo) URL(h HandlerFunc, params ...interface{}) string {
 }
 
 // Reverse generates an URL from route name and provided parameters.
-func (e *Echo) Reverse(name string, params ...interface{}) string {
+/*func (e *Echo) Reverse(name string, params ...interface{}) string {
 	uri := new(bytes.Buffer)
 	ln := len(params)
 	n := 0
@@ -568,7 +570,7 @@ func (e *Echo) Routes() []*Route {
 		routes = append(routes, v)
 	}
 	return routes
-}
+}*/
 
 // AcquireContext returns an empty `Context` instance from the pool.
 // You must return the context by calling `ReleaseContext()`.
@@ -591,6 +593,7 @@ func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	h := NotFoundHandler
 
 	if e.premiddleware == nil {
+		e.router.ServeHTTP(w, r)
 		e.router.Find(r.Method, getPath(r), c)
 		h = c.Handler()
 		for i := len(e.middleware) - 1; i >= 0; i-- {

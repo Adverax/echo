@@ -1,5 +1,6 @@
 package echo
 
+/*
 import (
 	"fmt"
 	"net/http"
@@ -969,3 +970,4 @@ func prefix(tail bool, p, on, off string) string {
 	}
 	return fmt.Sprintf("%s%s", p, off)
 }
+*/

@@ -1,5 +1,6 @@
 package echo
 
+/*
 import (
 	"net/http"
 	"path"
@@ -175,3 +176,4 @@ func (g *group) Add(method, path string, h HandlerFunc, m ...MiddlewareFunc) *Ro
 	ms = append(ms, m...)
 	return g.echo.Add(method, g.prefix+path, h, ms...)
 }
+*/
