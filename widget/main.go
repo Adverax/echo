@@ -348,16 +348,7 @@ func (w *Sprintf) Translate(
 }
 
 func (w *Sprintf) String(ctx echo.Context) (string, error) {
-	if w.Layout == nil {
-		return "", nil
-	}
-
-	layout, err := RenderString(ctx, w.Layout)
-	if err != nil || layout == "" || len(w.Params) == 0 {
-		return layout, err
-	}
-
-	return fmt.Sprintf(layout, w.Params...), nil
+	return FormatMessage(ctx, w.Layout, w.Params...)
 }
 
 func (w *Sprintf) Error() string {
@@ -537,29 +528,6 @@ func (w *Variant) Render(ctx echo.Context) (interface{}, error) {
 	return val, nil
 }
 
-func RenderParams(
-	ctx echo.Context,
-	params []interface{},
-) ([]interface{}, error) {
-	list := make([]interface{}, len(params))
-	for i, param := range params {
-		if param == nil {
-			list[i] = ""
-		} else {
-			if widget, ok := param.(echo.Widget); ok {
-				item, err := widget.Render(ctx)
-				if err != nil {
-					return nil, err
-				}
-				list[i] = item
-			} else {
-				list[i] = param
-			}
-		}
-	}
-	return list, nil
-}
-
 func ConvertToHtml(v interface{}) (string, error) {
 	switch val := v.(type) {
 	case template.HTML:
@@ -651,27 +619,6 @@ func RenderLink(
 	}
 }
 
-// Render interface as string
-func RenderString(
-	ctx echo.Context,
-	v interface{},
-) (string, error) {
-	if v == nil {
-		return "", nil
-	}
-
-	val, err := echo.RenderWidget(ctx, v)
-	if err != nil {
-		return "", err
-	}
-
-	if layout, ok := generic.ConvertToString(val); ok {
-		return layout, nil
-	}
-
-	return "", nil
-}
-
 func RenderDataSet(
 	ctx echo.Context,
 	dataset echo.DataSet,
@@ -714,19 +661,47 @@ func RenderDataSet(
 
 func FormatMessage(
 	ctx echo.Context,
-	message interface{},
+	layout interface{},
 	args ...interface{},
 ) (string, error) {
-	msg, err := echo.RenderWidget(ctx, message)
+	format, err := echo.RenderString(ctx, layout)
 	if err != nil {
 		return "", err
 	}
 
-	if format, ok := msg.(string); ok {
-		return fmt.Sprintf(format, args...), nil
+	if len(args) == 0 {
+		return format, nil
 	}
 
-	return "", nil
+	params, err := RenderParams(ctx, args)
+	if err != nil {
+		return "", err
+	}
+
+	return fmt.Sprintf(format, params...), nil
+}
+
+func RenderParams(
+	ctx echo.Context,
+	params []interface{},
+) ([]interface{}, error) {
+	list := make([]interface{}, len(params))
+	for i, param := range params {
+		if param == nil {
+			list[i] = ""
+		} else {
+			if widget, ok := param.(echo.Widget); ok {
+				item, err := widget.Render(ctx)
+				if err != nil {
+					return nil, err
+				}
+				list[i] = item
+			} else {
+				list[i] = param
+			}
+		}
+	}
+	return list, nil
 }
 
 func escapeUrl(u string) (template.URL, error) {

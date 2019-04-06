@@ -347,10 +347,17 @@ func RenderString(
 	v interface{},
 ) (string, error) {
 	switch s := v.(type) {
-	case Stringer:
-		return s.String(ctx)
 	case string:
 		return s, nil
+	case Widget:
+		v, err := s.Render(ctx)
+		if err != nil {
+			return "", err
+		}
+		vv, _ := generic.ConvertToString(v)
+		return vv, nil
+	case Stringer:
+		return s.String(ctx)
 	default:
 		res, _ := generic.ConvertToString(v)
 		return res, nil
