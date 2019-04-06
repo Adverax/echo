@@ -364,35 +364,65 @@ func (w *Sprintf) Error() string {
 	return "Validation error"
 }
 
-// Document is util for format with complex named params.
+// Document is util for format with complex named params and references.
 type Document struct {
-	Layout  interface{}    // Layout
-	Params  generic.Params // Message arguments
-	Pattern *regexp.Regexp // RegEx pattern for replace params (default {{name@param}})
+	Layout      interface{}            // Layout
+	Params      generic.Params         // Message arguments
+	References  map[string]interface{} // Map of hyperlinks name->action
+	ParamRe     *regexp.Regexp         // RegEx pattern for replace params (default {{name@param}})
+	ReferenceRe *regexp.Regexp         // RegEx pattern for replace reference (default [label](name))
 }
 
 func (w *Document) Render(ctx echo.Context) (interface{}, error) {
 	if w.Layout == nil {
 		return "", nil
 	}
+
 	val, err := echo.RenderWidget(ctx, w.Layout)
 	if err != nil {
 		return nil, err
 	}
-	if layout, ok := generic.ConvertToString(val); ok {
-		return w.renderParams(ctx, layout)
+
+	var s string
+	switch v := val.(type) {
+	case string:
+		s = v
+	case template.HTML:
+		s = string(v)
+	case echo.Stringer:
+		s, err = v.String(ctx)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		s, _ = generic.ConvertToString(v)
 	}
-	return "", nil
+
+	if len(w.Params) != 0 {
+		s, err = w.renderParams(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(w.References) != 0 {
+		s, err = w.renderReferences(ctx, s)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return template.HTML(s), nil
 }
 
-func (w *Document) renderParams(ctx echo.Context, code string) (interface{}, error) {
+func (w *Document) renderParams(ctx echo.Context, code string) (string, error) {
 	if len(w.Params) == 0 {
 		return code, nil
 	}
 
 	var firstErr error
 
-	re := w.Pattern
+	re := w.ParamRe
 	if re == nil {
 		re = DefaultDocumentParamRe
 	}
@@ -430,29 +460,21 @@ func (w *Document) renderParams(ctx echo.Context, code string) (interface{}, err
 	)
 
 	if firstErr != nil {
-		return nil, firstErr
+		return "", firstErr
 	}
 
-	return template.HTML(code2), nil
+	return code2, nil
 }
 
-var DefaultDocumentParamRe = regexp.MustCompile(`(?i:{{\s*([\w\d.\-]+)\s*}})`)
-
-// References is layout with embedded links via pattern [label](name)
-type References struct {
-	Layout interface{}            // Source text
-	Refs   map[string]interface{} // Map of hyperlinks name->action
-}
-
-func (w *References) Render(ctx echo.Context) (interface{}, error) {
-	layout, err := RenderString(ctx, w.Layout)
-	if err != nil || layout == "" || len(w.Refs) == 0 {
-		return layout, err
+func (w *Document) renderReferences(ctx echo.Context, code string) (string, error) {
+	re := w.ReferenceRe
+	if re == nil {
+		re = DefaultDocumentReferenceRe
 	}
 
-	pairs := linkedTextRe.FindAllStringIndex(layout, 1000)
+	pairs := re.FindAllStringIndex(code, 1000)
 	if pairs == nil {
-		return layout, nil
+		return code, nil
 	}
 
 	var pos int
@@ -461,19 +483,19 @@ func (w *References) Render(ctx echo.Context) (interface{}, error) {
 		src := pair[0]
 		dst := pair[1]
 		if pos < src {
-			result += html.EscapeString(layout[pos:src])
+			result += html.EscapeString(code[pos:src])
 			pos = src
 		}
-		frame := layout[src:dst]
-		items := linkedTextRe.FindStringSubmatch(frame)
-		if ref, found := w.Refs[items[2]]; found {
+		frame := code[src:dst]
+		items := re.FindStringSubmatch(frame)
+		if ref, found := w.References[items[2]]; found {
 			r, err := RenderLink(ctx, ref)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			url2, err := escapeUrl(r)
 			if err != nil {
-				return nil, err
+				return "", err
 			}
 			result += `<a href="` + string(url2) + `">` + html.EscapeString(items[1]) + `</a>`
 		} else {
@@ -482,16 +504,17 @@ func (w *References) Render(ctx echo.Context) (interface{}, error) {
 		pos = dst
 	}
 
-	src := len(layout)
+	src := len(code)
 	if pos < src {
-		result += html.EscapeString(layout[pos:src])
+		result += html.EscapeString(code[pos:src])
 	}
 
-	return template.HTML(result), nil
+	return result, nil
 }
 
 var (
-	linkedTextRe = regexp.MustCompile(`\[([^]]+)]\(([a-z0-9]+)\)`)
+	DefaultDocumentParamRe     = regexp.MustCompile(`(?i:{{\s*([\w\d.\-]+)\s*}})`)
+	DefaultDocumentReferenceRe = regexp.MustCompile(`\[([^]]+)]\(([a-z0-9]+)\)`)
 )
 
 // Any value with formatter

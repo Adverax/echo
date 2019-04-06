@@ -126,7 +126,7 @@ func TestRenderWidget(t *testing.T) {
 			},
 			dst: `"Shows rows from 1 to 2 of 3"`,
 		},
-		"Document": {
+		"Document: params": {
 			src: &Document{
 				Layout: "Hello, {{name}}",
 				Params: generic.Params{
@@ -135,10 +135,10 @@ func TestRenderWidget(t *testing.T) {
 			},
 			dst: "Hello, Bob",
 		},
-		"References": {
-			src: &References{
+		"Document: references": {
+			src: &Document{
 				Layout: "Hello, [Bob](name)",
-				Refs: map[string]interface{}{
+				References: map[string]interface{}{
 					"name": "google.com",
 				},
 			},
@@ -430,6 +430,7 @@ func TestRenderWidget(t *testing.T) {
 
 			var dst string
 			if v, ok := tree.(template.HTML); ok {
+				// Use html without marshaling
 				dst = string(v)
 			} else {
 				res, err := json.Marshal(tree)
