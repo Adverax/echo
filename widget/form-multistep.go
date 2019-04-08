@@ -410,17 +410,18 @@ var (
 
 // Attach handler to MUX
 func AddMultiStepHandler(
-	mux Mux,
+	e *echo.Echo,
+	router echo.Router,
 	handler echo.HandlerFunc,
 ) {
 	// Undo multistep form
-	mux.GET("/:id/:undo", handler)
+	e.GET(router, "/:id/{undo}", handler)
 
 	// Stage multistep form
-	mux.FORM("/:id", handler)
+	e.FORM(router, "/{id}", handler)
 
 	// Start multistep form
-	mux.GET("/", handler)
+	e.GET(router, "/", handler)
 }
 
 var redoDataSet = echo.NewDataSet(

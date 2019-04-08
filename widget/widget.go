@@ -726,12 +726,6 @@ func Coalesce(
 	return nil, nil
 }
 
-type Mux interface {
-	GET(pattern string, h echo.HandlerFunc)
-	POST(pattern string, h echo.HandlerFunc)
-	FORM(pattern string, h echo.HandlerFunc)
-}
-
 var (
 	TimeInfinity  int64 = 0x7fffffffffffffff
 	emptySelected       = make(map[string]bool)
