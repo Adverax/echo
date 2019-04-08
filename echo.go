@@ -97,6 +97,14 @@ func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
 	}
 }
 
+// NewRouter return a new Router instance.
+func (e *Echo) NewRouter() Router {
+	return &router{
+		echo:   e,
+		Router: chi.NewRouter(),
+	}
+}
+
 // Router returns router.
 func (e *Echo) Router() Router {
 	return e.router
@@ -504,7 +512,7 @@ func New() (e *Echo) {
 	e.roots.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
-	e.router = NewRouter(e)
+	e.router = e.NewRouter()
 	return
 }
 
@@ -713,8 +721,4 @@ func (r *router) NotFound(handler HandlerFunc) {
 
 func (r *router) MethodNotAllowed(handler HandlerFunc) {
 	r.Router.MethodNotAllowed(r.echo.dispatch(handler))
-}
-
-func NewRouter(e *Echo) Router {
-	return &router{echo: e, Router: chi.NewRouter()}
 }
