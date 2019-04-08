@@ -54,56 +54,287 @@ import (
 	"golang.org/x/crypto/acme/autocert"
 )
 
-type (
-	Router = chi.Router
+// Echo is the top-level framework instance.
+type Echo struct {
+	maxParam         *int
+	router           Router
+	notFoundHandler  HandlerFunc
+	roots            sync.Pool
+	Server           *http.Server
+	TLSServer        *http.Server
+	Listener         net.Listener
+	TLSListener      net.Listener
+	AutoTLSManager   autocert.Manager
+	DisableHTTP2     bool
+	Debug            bool
+	HideBanner       bool
+	HidePort         bool
+	Complex          bool
+	HTTPErrorHandler HTTPErrorHandler
+	Logger           log.Logger
+	Locale           Locale // Prototype
+	UrlLinker        UrlLinker
+	Cache            cache.Cache
+	Context          stdContext.Context
+	Messages         MessageManager
+	Resources        ResourceManager
+	DataSets         DataSetManager
+}
 
-	// Echo is the top-level framework instance.
-	Echo struct {
-		maxParam         *int
-		router           Router
-		notFoundHandler  HandlerFunc
-		roots            sync.Pool
-		Server           *http.Server
-		TLSServer        *http.Server
-		Listener         net.Listener
-		TLSListener      net.Listener
-		AutoTLSManager   autocert.Manager
-		DisableHTTP2     bool
-		Debug            bool
-		HideBanner       bool
-		HidePort         bool
-		Complex          bool
-		HTTPErrorHandler HTTPErrorHandler
-		Logger           log.Logger
-		Locale           Locale // Prototype
-		UrlLinker        UrlLinker
-		Cache            cache.Cache
-		Context          stdContext.Context
-		Messages         MessageManager
-		Resources        ResourceManager
-		DataSets         DataSetManager
+// NewContext returns a Context instance.
+func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
+	locale := generic.MakePointerTo(generic.CloneValue(e.Locale))
+	ctx, r := makeContext(r)
+
+	return &context{
+		Context:  ctx,
+		request:  r,
+		response: NewResponse(w, e),
+		store:    make(map[interface{}]interface{}),
+		echo:     e,
+		handler:  NotFoundHandler,
+		locale:   locale.(Locale),
+	}
+}
+
+// Router returns router.
+func (e *Echo) Router() Router {
+	return e.router
+}
+
+// DefaultHTTPErrorHandler is the default HTTP error handler. It sends a JSON response
+// with status code.
+func (e *Echo) DefaultHTTPErrorHandler(c Context, err error) {
+	var (
+		code = http.StatusInternalServerError
+		msg  interface{}
+	)
+
+	if he, ok := err.(*HTTPError); ok {
+		code = he.Code
+		msg = he.Message
+		if he.Internal != nil {
+			err = fmt.Errorf("%v, %v", err, he.Internal)
+		}
+	} else if e.Debug {
+		msg = err.Error()
+	} else {
+		msg = http.StatusText(code)
+	}
+	if _, ok := msg.(string); ok {
+		msg = Map{"message": msg}
 	}
 
-	// HTTPError represents an error that occurred while handling a request.
-	HTTPError struct {
-		Code     int
-		Message  interface{}
-		Internal error // Stores the error returned by an external dependency
+	// Send response
+	if !c.Response().Committed {
+		if c.Request().Method == http.MethodHead { // Issue #608
+			err = c.NoContent(code)
+		} else {
+			err = c.JSON(code, msg)
+		}
+		if err != nil {
+			e.Logger.Error(err)
+		}
+	}
+}
+
+// AcquireContext returns an empty `Context` instance from the pool.
+// You must return the context by calling `ReleaseContext()`.
+func (e *Echo) AcquireContext() Context {
+	return e.roots.Get().(Context)
+}
+
+// ReleaseContext returns the `Context` instance back to the pool.
+// You must call it after `AcquireContext()`.
+func (e *Echo) ReleaseContext(c Context) {
+	e.roots.Put(c)
+}
+
+// ServeHTTP implements `http.Handler` interface, which serves HTTP requests.
+func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if e.Complex {
+		e.router.ServeHTTP(w, r)
+		return
 	}
 
-	Handler interface {
-		ServeHTTP(ctx Context) error
+	// Acquire context
+	c := e.roots.Get().(*context)
+	c.Reset(r, w)
+
+	// Attach context to the response
+	r = r.WithContext(stdContext.WithValue(r.Context(), ContextKey, c))
+	c.request = r
+
+	// Execute chain
+	e.router.ServeHTTP(w, r)
+
+	// Release context
+	e.roots.Put(c)
+}
+
+// Dynamic is internal method, that used for init context for handling dynamic HTTP requests in the COMPLEX mode.
+func (e *Echo) Dynamic(w http.ResponseWriter, r *http.Request, next http.Handler) {
+	// Acquire context
+	c := e.roots.Get().(*context)
+	defer e.roots.Put(c)
+
+	c.Reset(r, w)
+
+	// Attach context to the response
+	r = r.WithContext(stdContext.WithValue(r.Context(), ContextKey, c))
+	c.request = r
+
+	// Execute chain
+	next.ServeHTTP(w, r)
+}
+
+// Invoke http handler
+func (e *Echo) dispatch(handler HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		c := r.Context().Value(ContextKey).(*context)
+		c.Context = r.Context()
+		c.request = r.WithContext(c)
+
+		err := handler(c)
+		if err != nil {
+			e.HTTPErrorHandler(c, err)
+		}
+	}
+}
+
+// Start starts an HTTP server.
+func (e *Echo) Start(address string) error {
+	e.Server.Addr = address
+	return e.StartServer(e.Server)
+}
+
+// StartTLS starts an HTTPS server.
+// If `certFile` or `keyFile` is `string` the values are treated as file paths.
+// If `certFile` or `keyFile` is `[]byte` the values are treated as the certificate or key as-is.
+func (e *Echo) StartTLS(address string, certFile, keyFile interface{}) (err error) {
+	var cert []byte
+	if cert, err = filepathOrContent(certFile); err != nil {
+		return
 	}
 
-	// HandlerFunc defines a function to serve HTTP requests.
-	HandlerFunc func(ctx Context) error
+	var key []byte
+	if key, err = filepathOrContent(keyFile); err != nil {
+		return
+	}
 
-	// HTTPErrorHandler is a centralized HTTP error handler.
-	HTTPErrorHandler func(Context, error)
+	s := e.TLSServer
+	s.TLSConfig = new(tls.Config)
+	s.TLSConfig.Certificates = make([]tls.Certificate, 1)
+	if s.TLSConfig.Certificates[0], err = tls.X509KeyPair(cert, key); err != nil {
+		return
+	}
 
-	// Map defines a generic map of type `map[string]interface{}`.
-	Map map[string]interface{}
-)
+	return e.startTLS(address)
+}
+
+// StartAutoTLS starts an HTTPS server using certificates automatically installed from https://letsencrypt.org.
+func (e *Echo) StartAutoTLS(address string) error {
+	s := e.TLSServer
+	s.TLSConfig = new(tls.Config)
+	s.TLSConfig.GetCertificate = e.AutoTLSManager.GetCertificate
+	return e.startTLS(address)
+}
+
+func (e *Echo) startTLS(address string) error {
+	s := e.TLSServer
+	s.Addr = address
+	if !e.DisableHTTP2 {
+		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, "h2")
+	}
+	return e.StartServer(e.TLSServer)
+}
+
+// StartServer starts a custom http server.
+func (e *Echo) StartServer(s *http.Server) (err error) {
+	// Setup
+	//s.ErrorLog = e.StdLogger
+	s.Handler = e
+	/*if e.Debug {
+		e.Logger.SetLevel(log.DEBUG)
+	}
+
+	if !e.HideBanner {
+		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
+	}*/
+
+	if s.TLSConfig == nil {
+		if e.Listener == nil {
+			e.Listener, err = newListener(s.Addr)
+			if err != nil {
+				return err
+			}
+		}
+		if !e.HidePort {
+			e.Logger.Info(fmt.Sprintf("⇨ http server started on %s\n", e.Listener.Addr()))
+		}
+		return s.Serve(e.Listener)
+	}
+	if e.TLSListener == nil {
+		l, err := newListener(s.Addr)
+		if err != nil {
+			return err
+		}
+		e.TLSListener = tls.NewListener(l, s.TLSConfig)
+	}
+	if !e.HidePort {
+		e.Logger.Info(fmt.Sprintf("⇨ https server started on %s\n", e.TLSListener.Addr()))
+	}
+	return s.Serve(e.TLSListener)
+}
+
+// Close immediately stops the server.
+// It internally calls `http.Server#Close()`.
+func (e *Echo) Close() error {
+	if err := e.TLSServer.Close(); err != nil {
+		return err
+	}
+	return e.Server.Close()
+}
+
+// Shutdown stops the server gracefully.
+// It internally calls `http.Server#Shutdown()`.
+func (e *Echo) Shutdown(ctx stdContext.Context) error {
+	if err := e.TLSServer.Shutdown(ctx); err != nil {
+		return err
+	}
+	return e.Server.Shutdown(ctx)
+}
+
+// HTTPError represents an error that occurred while handling a request.
+type HTTPError struct {
+	Code     int
+	Message  interface{}
+	Internal error // Stores the error returned by an external dependency
+}
+
+// Error makes it compatible with `error` interface.
+func (he *HTTPError) Error() string {
+	return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
+}
+
+// SetInternal sets error to HTTPError.Internal
+func (he *HTTPError) SetInternal(err error) *HTTPError {
+	he.Internal = err
+	return he
+}
+
+type Handler interface {
+	ServeHTTP(ctx Context) error
+}
+
+// HandlerFunc defines a function to serve HTTP requests.
+type HandlerFunc func(ctx Context) error
+
+// HTTPErrorHandler is a centralized HTTP error handler.
+type HTTPErrorHandler func(Context, error)
+
+// Map defines a generic map of type `map[string]interface{}`.
+type Map map[string]interface{}
 
 func (fn HandlerFunc) ServeHTTP(ctx Context) error {
 	return fn(ctx)
@@ -273,296 +504,8 @@ func New() (e *Echo) {
 	e.roots.New = func() interface{} {
 		return e.NewContext(nil, nil)
 	}
-	e.router = chi.NewRouter()
+	e.router = NewRouter(e)
 	return
-}
-
-// NewContext returns a Context instance.
-func (e *Echo) NewContext(r *http.Request, w http.ResponseWriter) Context {
-	locale := generic.MakePointerTo(generic.CloneValue(e.Locale))
-	ctx, r := makeContext(r)
-
-	return &context{
-		Context:  ctx,
-		request:  r,
-		response: NewResponse(w, e),
-		store:    make(map[interface{}]interface{}),
-		echo:     e,
-		handler:  NotFoundHandler,
-		locale:   locale.(Locale),
-	}
-}
-
-// Router returns router.
-func (e *Echo) Router() Router {
-	return e.router
-}
-
-// DefaultHTTPErrorHandler is the default HTTP error handler. It sends a JSON response
-// with status code.
-func (e *Echo) DefaultHTTPErrorHandler(c Context, err error) {
-	var (
-		code = http.StatusInternalServerError
-		msg  interface{}
-	)
-
-	if he, ok := err.(*HTTPError); ok {
-		code = he.Code
-		msg = he.Message
-		if he.Internal != nil {
-			err = fmt.Errorf("%v, %v", err, he.Internal)
-		}
-	} else if e.Debug {
-		msg = err.Error()
-	} else {
-		msg = http.StatusText(code)
-	}
-	if _, ok := msg.(string); ok {
-		msg = Map{"message": msg}
-	}
-
-	// Send response
-	if !c.Response().Committed {
-		if c.Request().Method == http.MethodHead { // Issue #608
-			err = c.NoContent(code)
-		} else {
-			err = c.JSON(code, msg)
-		}
-		if err != nil {
-			e.Logger.Error(err)
-		}
-	}
-}
-
-func (e *Echo) HANDLE(router Router, pattern string, handler HandlerFunc) {
-	router.Handle(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) CONNECT(router Router, pattern string, handler HandlerFunc) {
-	router.Connect(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) DELETE(router Router, pattern string, handler HandlerFunc) {
-	router.Delete(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) GET(router Router, pattern string, handler HandlerFunc) {
-	router.Get(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) HEAD(router Router, pattern string, handler HandlerFunc) {
-	router.Head(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) OPTIONS(router Router, pattern string, handler HandlerFunc) {
-	router.Options(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) PATCH(router Router, pattern string, handler HandlerFunc) {
-	router.Patch(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) POST(router Router, pattern string, handler HandlerFunc) {
-	router.Post(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) PUT(router Router, pattern string, handler HandlerFunc) {
-	router.Put(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) TRACE(router Router, pattern string, handler HandlerFunc) {
-	router.Trace(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) FORM(router Router, pattern string, handler HandlerFunc) {
-	router.Get(pattern, e.dispatch(handler))
-	router.Post(pattern, e.dispatch(handler))
-}
-
-func (e *Echo) NotFound(router Router, handler HandlerFunc) {
-	router.NotFound(e.dispatch(handler))
-}
-
-func (e *Echo) MethodNotAllowed(router Router, handler HandlerFunc) {
-	router.MethodNotAllowed(e.dispatch(handler))
-}
-
-// AcquireContext returns an empty `Context` instance from the pool.
-// You must return the context by calling `ReleaseContext()`.
-func (e *Echo) AcquireContext() Context {
-	return e.roots.Get().(Context)
-}
-
-// ReleaseContext returns the `Context` instance back to the pool.
-// You must call it after `AcquireContext()`.
-func (e *Echo) ReleaseContext(c Context) {
-	e.roots.Put(c)
-}
-
-// ServeHTTP implements `http.Handler` interface, which serves HTTP requests.
-func (e *Echo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if e.Complex {
-		e.router.ServeHTTP(w, r)
-		return
-	}
-
-	// Acquire context
-	c := e.roots.Get().(*context)
-	c.Reset(r, w)
-
-	// Attach context to the response
-	r = r.WithContext(stdContext.WithValue(r.Context(), ContextKey, c))
-	c.request = r
-
-	// Execute chain
-	e.router.ServeHTTP(w, r)
-
-	// Release context
-	e.roots.Put(c)
-}
-
-// Dynamic is internal method, that used for init context for handling dynamic HTTP requests in the COMPLEX mode.
-func (e *Echo) Dynamic(w http.ResponseWriter, r *http.Request, next http.Handler) {
-	// Acquire context
-	c := e.roots.Get().(*context)
-	defer e.roots.Put(c)
-
-	c.Reset(r, w)
-
-	// Attach context to the response
-	r = r.WithContext(stdContext.WithValue(r.Context(), ContextKey, c))
-	c.request = r
-
-	// Execute chain
-	next.ServeHTTP(w, r)
-}
-
-// Invoke http handler
-func (e *Echo) dispatch(handler Handler) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		c := r.Context().Value(ContextKey).(*context)
-		c.Context = r.Context()
-		c.request = r.WithContext(c)
-
-		err := handler.ServeHTTP(c)
-		if err != nil {
-			e.HTTPErrorHandler(c, err)
-		}
-	}
-}
-
-// Start starts an HTTP server.
-func (e *Echo) Start(address string) error {
-	e.Server.Addr = address
-	return e.StartServer(e.Server)
-}
-
-// StartTLS starts an HTTPS server.
-// If `certFile` or `keyFile` is `string` the values are treated as file paths.
-// If `certFile` or `keyFile` is `[]byte` the values are treated as the certificate or key as-is.
-func (e *Echo) StartTLS(address string, certFile, keyFile interface{}) (err error) {
-	var cert []byte
-	if cert, err = filepathOrContent(certFile); err != nil {
-		return
-	}
-
-	var key []byte
-	if key, err = filepathOrContent(keyFile); err != nil {
-		return
-	}
-
-	s := e.TLSServer
-	s.TLSConfig = new(tls.Config)
-	s.TLSConfig.Certificates = make([]tls.Certificate, 1)
-	if s.TLSConfig.Certificates[0], err = tls.X509KeyPair(cert, key); err != nil {
-		return
-	}
-
-	return e.startTLS(address)
-}
-
-func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {
-	switch v := fileOrContent.(type) {
-	case string:
-		return ioutil.ReadFile(v)
-	case []byte:
-		return v, nil
-	default:
-		return nil, ErrInvalidCertOrKeyType
-	}
-}
-
-// StartAutoTLS starts an HTTPS server using certificates automatically installed from https://letsencrypt.org.
-func (e *Echo) StartAutoTLS(address string) error {
-	s := e.TLSServer
-	s.TLSConfig = new(tls.Config)
-	s.TLSConfig.GetCertificate = e.AutoTLSManager.GetCertificate
-	return e.startTLS(address)
-}
-
-func (e *Echo) startTLS(address string) error {
-	s := e.TLSServer
-	s.Addr = address
-	if !e.DisableHTTP2 {
-		s.TLSConfig.NextProtos = append(s.TLSConfig.NextProtos, "h2")
-	}
-	return e.StartServer(e.TLSServer)
-}
-
-// StartServer starts a custom http server.
-func (e *Echo) StartServer(s *http.Server) (err error) {
-	// Setup
-	//s.ErrorLog = e.StdLogger
-	s.Handler = e
-	/*if e.Debug {
-		e.Logger.SetLevel(log.DEBUG)
-	}
-
-	if !e.HideBanner {
-		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
-	}*/
-
-	if s.TLSConfig == nil {
-		if e.Listener == nil {
-			e.Listener, err = newListener(s.Addr)
-			if err != nil {
-				return err
-			}
-		}
-		if !e.HidePort {
-			e.Logger.Info(fmt.Sprintf("⇨ http server started on %s\n", e.Listener.Addr()))
-		}
-		return s.Serve(e.Listener)
-	}
-	if e.TLSListener == nil {
-		l, err := newListener(s.Addr)
-		if err != nil {
-			return err
-		}
-		e.TLSListener = tls.NewListener(l, s.TLSConfig)
-	}
-	if !e.HidePort {
-		e.Logger.Info(fmt.Sprintf("⇨ https server started on %s\n", e.TLSListener.Addr()))
-	}
-	return s.Serve(e.TLSListener)
-}
-
-// Close immediately stops the server.
-// It internally calls `http.Server#Close()`.
-func (e *Echo) Close() error {
-	if err := e.TLSServer.Close(); err != nil {
-		return err
-	}
-	return e.Server.Close()
-}
-
-// Shutdown stops the server gracefully.
-// It internally calls `http.Server#Shutdown()`.
-func (e *Echo) Shutdown(ctx stdContext.Context) error {
-	if err := e.TLSServer.Shutdown(ctx); err != nil {
-		return err
-	}
-	return e.Server.Shutdown(ctx)
 }
 
 // NewHTTPError creates a new HTTPError instance.
@@ -571,17 +514,6 @@ func NewHTTPError(code int, message ...interface{}) *HTTPError {
 	if len(message) > 0 {
 		he.Message = message[0]
 	}
-	return he
-}
-
-// Error makes it compatible with `error` interface.
-func (he *HTTPError) Error() string {
-	return fmt.Sprintf("code=%d, message=%v", he.Code, he.Message)
-}
-
-// SetInternal sets error to HTTPError.Internal
-func (he *HTTPError) SetInternal(err error) *HTTPError {
-	he.Internal = err
 	return he
 }
 
@@ -610,6 +542,17 @@ func (ln tcpKeepAliveListener) Accept() (c net.Conn, err error) {
 		return
 	}
 	return
+}
+
+func filepathOrContent(fileOrContent interface{}) (content []byte, err error) {
+	switch v := fileOrContent.(type) {
+	case string:
+		return ioutil.ReadFile(v)
+	case []byte:
+		return v, nil
+	default:
+		return nil, ErrInvalidCertOrKeyType
+	}
 }
 
 func newListener(address string) (*tcpKeepAliveListener, error) {
@@ -641,4 +584,137 @@ func makeContext(r *http.Request) (ctx stdContext.Context, req *http.Request) {
 	}
 
 	return ctx, r
+}
+
+type Router interface {
+	http.Handler
+	chi.Routes
+
+	// Use appends one of more middlewares onto the Router stack.
+	Use(middlewares ...func(http.Handler) http.Handler)
+
+	// With adds inline middlewares for an endpoint handler.
+	With(middlewares ...func(http.Handler) http.Handler) Router
+
+	// Group adds a new inline-Router along the current routing
+	// path, with a fresh middleware stack for the inline-Router.
+	Group(fn func(r Router)) Router
+
+	// Route mounts a sub-Router along a `pattern`` string.
+	Route(pattern string, fn func(r Router)) Router
+
+	// Handle and HandleFunc adds routes for `pattern` that matches
+	// all HTTP methods.
+	Handle(pattern string, h HandlerFunc)
+
+	// Method and MethodFunc adds routes for `pattern` that matches
+	// the `method` HTTP method.
+	Method(method, pattern string, h HandlerFunc)
+
+	// HTTP-method routing along `pattern`
+	Connect(pattern string, h HandlerFunc)
+	Delete(pattern string, h HandlerFunc)
+	Get(pattern string, h HandlerFunc)
+	Head(pattern string, h HandlerFunc)
+	Options(pattern string, h HandlerFunc)
+	Patch(pattern string, h HandlerFunc)
+	Post(pattern string, h HandlerFunc)
+	Put(pattern string, h HandlerFunc)
+	Trace(pattern string, h HandlerFunc)
+	Form(pattern string, h HandlerFunc)
+
+	// NotFound defines a handler to respond whenever a route could
+	// not be found.
+	NotFound(h HandlerFunc)
+
+	// MethodNotAllowed defines a handler to respond whenever a method is
+	// not allowed.
+	MethodNotAllowed(h HandlerFunc)
+}
+
+type router struct {
+	chi.Router
+	echo *Echo
+}
+
+func (r *router) With(middlewares ...func(http.Handler) http.Handler) Router {
+	rr := r.Router.With(middlewares...)
+	return &router{echo: r.echo, Router: rr}
+}
+
+func (r *router) Group(fn func(Router)) (res Router) {
+	r.Router.Group(func(rr chi.Router) {
+		res := &router{Router: rr, echo: r.echo}
+		fn(res)
+	})
+	return
+}
+
+func (r *router) Route(pattern string, fn func(r Router)) (res Router) {
+	r.Router.Route(pattern, func(rr chi.Router) {
+		res := &router{Router: rr, echo: r.echo}
+		fn(res)
+	})
+	return
+}
+
+func (r *router) Method(method, pattern string, handler HandlerFunc) {
+	r.Router.MethodFunc(method, pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Handle(pattern string, handler HandlerFunc) {
+	r.Router.Handle(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Connect(pattern string, handler HandlerFunc) {
+	r.Router.Connect(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Delete(pattern string, handler HandlerFunc) {
+	r.Router.Delete(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Get(pattern string, handler HandlerFunc) {
+	r.Router.Get(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Head(pattern string, handler HandlerFunc) {
+	r.Router.Head(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Options(pattern string, handler HandlerFunc) {
+	r.Router.Options(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Patch(pattern string, handler HandlerFunc) {
+	r.Router.Patch(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Post(pattern string, handler HandlerFunc) {
+	r.Router.Post(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Put(pattern string, handler HandlerFunc) {
+	r.Router.Put(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Trace(pattern string, handler HandlerFunc) {
+	r.Router.Trace(pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Form(pattern string, handler HandlerFunc) {
+	r.Get(pattern, handler)
+	r.Post(pattern, handler)
+}
+
+func (r *router) NotFound(handler HandlerFunc) {
+	r.Router.NotFound(r.echo.dispatch(handler))
+}
+
+func (r *router) MethodNotAllowed(handler HandlerFunc) {
+	r.Router.MethodNotAllowed(r.echo.dispatch(handler))
+}
+
+func NewRouter(e *Echo) Router {
+	return &router{echo: e, Router: chi.NewRouter()}
 }

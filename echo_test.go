@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -117,7 +118,7 @@ func TestEchoTrace(t *testing.T) {
 
 func TestEchoForm(t *testing.T) {
 	e := New()
-	e.FORM(e.Router(), "/", func(c Context) error {
+	e.Router().Form("/", func(c Context) error {
 		return c.String(http.StatusOK, "Any")
 	})
 }
@@ -132,7 +133,7 @@ func TestEchoNotFound(t *testing.T) {
 
 func TestEchoMethodNotAllowed(t *testing.T) {
 	e := New()
-	e.GET(e.router, "/", func(c Context) error {
+	e.Router().Get("/", func(c Context) error {
 		return c.String(http.StatusOK, "Echo!")
 	})
 	req := httptest.NewRequest(http.MethodPost, "/", nil)
@@ -258,8 +259,8 @@ func testMethod(t *testing.T, method, path string, e *Echo) {
 	h := reflect.ValueOf(func(c Context) error {
 		return c.String(http.StatusOK, method)
 	})
-	i := interface{}(e)
-	reflect.ValueOf(i).MethodByName(method).Call([]reflect.Value{r, p, h})
+	name := strings.Title(strings.ToLower(method))
+	r.MethodByName(name).Call([]reflect.Value{p, h})
 	_, body := request(method, path, e)
 	assert.Equal(t, method, body)
 }
