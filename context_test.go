@@ -339,7 +339,6 @@ func TestContext(t *testing.T) {
 	assert.Equal(0, len(c.ParamValues()))
 	assert.Equal(0, len(c.ParamNames()))
 	assert.Equal(0, len(c.store))
-	assert.Equal("", c.Path())
 	assert.Equal(0, len(c.QueryParams()))
 }
 
@@ -390,7 +389,7 @@ func TestContextCookie(t *testing.T) {
 	assert.Contains(rec.Header().Get(HeaderSetCookie), "HttpOnly")
 }
 
-func TestContextPath(t *testing.T) {
+/*func TestContextPath(t *testing.T) {
 	e := New()
 	r := e.Router()
 
@@ -406,7 +405,7 @@ func TestContextPath(t *testing.T) {
 	c = e.NewContext(nil, nil)
 	r.Find(http.MethodGet, "/users/1/files/1", c)
 	assert.Equal("/users/:uid/files/:fid", c.Path())
-}
+}*/
 
 func TestContextPathParam(t *testing.T) {
 	e := New()
@@ -545,7 +544,7 @@ func BenchmarkContext_Store(b *testing.B) {
 	}
 }
 
-func TestContextHandler(t *testing.T) {
+/*func TestContextHandler(t *testing.T) {
 	e := New()
 	r := e.Router()
 	b := new(bytes.Buffer)
@@ -559,7 +558,7 @@ func TestContextHandler(t *testing.T) {
 	err := c.Handler()(c)
 	testify.Equal(t, "handler", b.String())
 	testify.NoError(t, err)
-}
+}*/
 
 func TestContext_SetHandler(t *testing.T) {
 	var c Context
@@ -571,16 +570,6 @@ func TestContext_SetHandler(t *testing.T) {
 		return nil
 	})
 	testify.NotNil(t, c.Handler())
-}
-
-func TestContext_Path(t *testing.T) {
-	path := "/pa/th"
-
-	var c Context
-	c = new(context)
-
-	c.SetPath(path)
-	testify.Equal(t, path, c.Path())
 }
 
 func TestContext_QueryString(t *testing.T) {

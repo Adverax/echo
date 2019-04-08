@@ -2,16 +2,14 @@ package middleware
 
 import (
 	"fmt"
+	"github.com/adverax/echo"
+	"github.com/adverax/echo/humanize/bytes"
 	"html/template"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
-
-	"github.com/adverax/echo"
-	"github.com/adverax/echo/humanize/bytes"
 )
 
 type (
@@ -121,7 +119,7 @@ var (
 
 // Static returns a Static middleware to serves static content from the provided
 // root directory.
-func Static(root string) echo.MiddlewareFunc {
+func Static(root string) func(http.Handler) http.Handler {
 	c := DefaultStaticConfig
 	c.Root = root
 	return StaticWithConfig(c)
@@ -129,7 +127,7 @@ func Static(root string) echo.MiddlewareFunc {
 
 // StaticWithConfig returns a Static middleware with config.
 // See `Static()`.
-func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
+func StaticWithConfig(config StaticConfig) func(http.Handler) http.Handler {
 	// Defaults
 	if config.Root == "" {
 		config.Root = "." // For security we want to restrict to CWD.
@@ -147,16 +145,18 @@ func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
 		panic(fmt.Sprintf("echo: %v", err))
 	}
 
-	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) (err error) {
+	return func(next http.Handler) http.Handler {
+		fn := func(w http.ResponseWriter, r *http.Request) {
+			c := echo.ContextFromRequest(r)
 			if config.Skipper(c) {
-				return next(c)
+				next.ServeHTTP(w, r)
+				return
 			}
 
 			p := c.Request().URL.Path
-			if strings.HasSuffix(c.Path(), "*") { // When serving from a group, e.g. `/static*`.
+			/*if strings.HasSuffix(c.Path(), "*") { // When serving from a group, e.g. `/static*`.
 				p = c.Param("*")
-			}
+			}*/
 			p, err = url.PathUnescape(p)
 			if err != nil {
 				return
@@ -166,14 +166,7 @@ func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
 			fi, err := os.Stat(name)
 			if err != nil {
 				if os.IsNotExist(err) {
-					if err = next(c); err != nil {
-						if he, ok := err.(*echo.HTTPError); ok {
-							if config.HTML5 && he.Code == http.StatusNotFound {
-								return c.File(filepath.Join(config.Root, config.Index))
-							}
-						}
-						return
-					}
+					next.ServeHTTP(w, r)
 				}
 				return
 			}
@@ -184,19 +177,31 @@ func StaticWithConfig(config StaticConfig) echo.MiddlewareFunc {
 
 				if err != nil {
 					if config.Browse {
-						return listDir(t, name, c.Response())
+						err := listDir(t, name, c.Response())
+						if err != nil {
+							c.Logger().Error(err)
+							return
+						}
 					}
 					if os.IsNotExist(err) {
-						return next(c)
+						next.ServeHTTP(w, r)
 					}
 					return
 				}
 
-				return c.File(index)
+				if err := c.File(index); err != nil {
+					c.Logger().Error(err)
+				}
+				return
 			}
 
-			return c.File(name)
+			if err := c.File(name); err != nil {
+				c.Logger().Error(err)
+			}
+			return
 		}
+
+		return http.HandlerFunc(fn)
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"github.com/adverax/echo/log"
+	"github.com/go-chi/chi"
 	"io"
 	"mime/multipart"
 	"net"
@@ -22,7 +23,10 @@ const (
 	defaultMemory = 32 << 20 // 32 MB
 	indexPage     = "index.html"
 	defaultIndent = "  "
+	ContextKey    = contextType(1)
 )
+
+type contextType int
 
 // Context represents the context of the current HTTP request. It holds request and
 // response objects, path, path parameters, data and registered handler.
@@ -50,12 +54,6 @@ type Context interface {
 	// RealIP returns the client's network address based on `X-Forwarded-For`
 	// or `X-Real-IP` request header.
 	RealIP() string
-
-	// Path returns the registered path for the handler.
-	Path() string
-
-	// SetPath sets the registered path for the handler.
-	SetPath(p string)
 
 	// Param returns path parameter by name.
 	Param(name string) string
@@ -235,8 +233,6 @@ type context struct {
 	request  *http.Request
 	response *Response
 	path     string
-	pnames   []string
-	pvalues  []string
 	query    url.Values
 	handler  HandlerFunc
 	store    map[interface{}]interface{}
@@ -306,31 +302,20 @@ func (c *context) RealIP() string {
 	return ra
 }
 
-func (c *context) Path() string {
-	return c.path
-}
-
-func (c *context) SetPath(p string) {
-	c.path = p
-}
-
 func (c *context) Param(name string) string {
-	return c.ParamString(name, "")
+	return chi.URLParamFromCtx(c, name)
 }
 
 func (c *context) ParamString(name string, defaults string) string {
-	for i, n := range c.pnames {
-		if i < len(c.pvalues) {
-			if n == name {
-				return c.pvalues[i]
-			}
-		}
+	v := c.Param(name)
+	if v == "" {
+		return defaults
 	}
-	return defaults
+	return v
 }
 
 func (c *context) ParamInt(name string, defaults int) int {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -342,7 +327,7 @@ func (c *context) ParamInt(name string, defaults int) int {
 }
 
 func (c *context) ParamInt8(name string, defaults int8) int8 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -354,7 +339,7 @@ func (c *context) ParamInt8(name string, defaults int8) int8 {
 }
 
 func (c *context) ParamInt16(name string, defaults int16) int16 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -366,7 +351,7 @@ func (c *context) ParamInt16(name string, defaults int16) int16 {
 }
 
 func (c *context) ParamInt32(name string, defaults int32) int32 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -378,7 +363,7 @@ func (c *context) ParamInt32(name string, defaults int32) int32 {
 }
 
 func (c *context) ParamInt64(name string, defaults int64) int64 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -390,7 +375,7 @@ func (c *context) ParamInt64(name string, defaults int64) int64 {
 }
 
 func (c *context) ParamUint(name string, defaults uint) uint {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -402,7 +387,7 @@ func (c *context) ParamUint(name string, defaults uint) uint {
 }
 
 func (c *context) ParamUint8(name string, defaults uint8) uint8 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -414,7 +399,7 @@ func (c *context) ParamUint8(name string, defaults uint8) uint8 {
 }
 
 func (c *context) ParamUint16(name string, defaults uint16) uint16 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -426,7 +411,7 @@ func (c *context) ParamUint16(name string, defaults uint16) uint16 {
 }
 
 func (c *context) ParamUint32(name string, defaults uint32) uint32 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -438,7 +423,7 @@ func (c *context) ParamUint32(name string, defaults uint32) uint32 {
 }
 
 func (c *context) ParamUint64(name string, defaults uint64) uint64 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -450,7 +435,7 @@ func (c *context) ParamUint64(name string, defaults uint64) uint64 {
 }
 
 func (c *context) ParamFloat32(name string, defaults float32) float32 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -462,7 +447,7 @@ func (c *context) ParamFloat32(name string, defaults float32) float32 {
 }
 
 func (c *context) ParamFloat64(name string, defaults float64) float64 {
-	s := c.ParamString(name, "")
+	s := c.Param(name)
 	if s == "" {
 		return defaults
 	}
@@ -474,7 +459,7 @@ func (c *context) ParamFloat64(name string, defaults float64) float64 {
 }
 
 func (c *context) ParamBoolean(name string, defaults bool) bool {
-	s := strings.ToLower(c.ParamString(name, ""))
+	s := strings.ToLower(c.Param(name))
 	if s == "" {
 		return defaults
 	}
@@ -485,19 +470,23 @@ func (c *context) ParamBoolean(name string, defaults bool) bool {
 }
 
 func (c *context) ParamNames() []string {
-	return c.pnames
+	cc := chi.RouteContext(c)
+	return cc.URLParams.Keys
 }
 
 func (c *context) SetParamNames(names ...string) {
-	c.pnames = names
+	cc := chi.RouteContext(c)
+	cc.URLParams.Keys = names
 }
 
 func (c *context) ParamValues() []string {
-	return c.pvalues[:len(c.pnames)]
+	cc := chi.RouteContext(c)
+	return cc.URLParams.Values[:len(cc.URLParams.Keys)]
 }
 
 func (c *context) SetParamValues(values ...string) {
-	c.pvalues = values
+	cc := chi.RouteContext(c)
+	cc.URLParams.Values = values
 }
 
 func (c *context) QueryParam(name string) string {
@@ -780,7 +769,7 @@ func (c *context) HeaderNoCache() {
 }
 
 func (c *context) Error(err error) {
-	c.echo.HTTPErrorHandler(err, c)
+	c.echo.HTTPErrorHandler(c, err)
 }
 
 func (c *context) Echo() *Echo {
@@ -808,16 +797,14 @@ func (c *context) SetSession(session Session) {
 }
 
 func (c *context) Reset(r *http.Request, w http.ResponseWriter) {
-	c.request = r
+	c.Context, c.request = makeContext(r)
 	c.response.reset(w)
 	c.query = nil
 	c.handler = NotFoundHandler
 	c.store = nil
 	c.path = ""
-	c.pnames = nil
 	c.session = nil
 	// NOTE: Don't reset because it has to have length c.echo.maxParam at all times
-	// c.pvalues = nil
 }
 
 func (c *context) Locale() Locale {
@@ -837,6 +824,14 @@ func (c *context) AddFlash(class FlashClass, message interface{}) error {
 	c.session.AddFlash(class, msg)
 
 	return nil
+}
+
+func (c *context) Value(key interface{}) interface{} {
+	if key == ContextKey {
+		return Context(c)
+	}
+
+	return c.Context.Value(key)
 }
 
 var boolMap = map[string]bool{
@@ -862,4 +857,8 @@ func (c *valueCtx) Value(key interface{}) interface{} {
 		return c.val
 	}
 	return c.Context.Value(key)
+}
+
+func ContextFromRequest(r *http.Request) Context {
+	return r.Context().Value(ContextKey).(Context)
 }

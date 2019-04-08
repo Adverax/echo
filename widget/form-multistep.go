@@ -417,7 +417,7 @@ func AddMultiStepHandler(
 	mux.GET("/:id/:undo", handler)
 
 	// Stage multistep form
-	mux.Any("/:id", handler)
+	mux.FORM("/:id", handler)
 
 	// Start multistep form
 	mux.GET("/", handler)
