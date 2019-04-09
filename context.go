@@ -859,6 +859,6 @@ func (c *valueCtx) Value(key interface{}) interface{} {
 	return c.Context.Value(key)
 }
 
-func ContextFromRequest(r *http.Request) Context {
+func RequestContext(r *http.Request) Context {
 	return r.Context().Value(ContextKey).(Context)
 }

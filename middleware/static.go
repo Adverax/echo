@@ -147,7 +147,7 @@ func StaticWithConfig(config StaticConfig) func(http.Handler) http.Handler {
 
 	return func(next http.Handler) http.Handler {
 		fn := func(w http.ResponseWriter, r *http.Request) {
-			c := echo.ContextFromRequest(r)
+			c := echo.RequestContext(r)
 			if config.Skipper(c) {
 				next.ServeHTTP(w, r)
 				return
