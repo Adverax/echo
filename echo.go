@@ -260,15 +260,11 @@ func (e *Echo) startTLS(address string) error {
 // StartServer starts a custom http server.
 func (e *Echo) StartServer(s *http.Server) (err error) {
 	// Setup
-	//s.ErrorLog = e.StdLogger
 	s.Handler = e
-	/*if e.Debug {
-		e.Logger.SetLevel(log.DEBUG)
-	}
 
 	if !e.HideBanner {
-		e.colorer.Printf(banner, e.colorer.Red("v"+Version), e.colorer.Blue(website))
-	}*/
+		e.Logger.Info(fmt.Sprintf(banner, "v"+Version, website))
+	}
 
 	if s.TLSConfig == nil {
 		if e.Listener == nil {
@@ -611,6 +607,9 @@ type Router interface {
 	// Route mounts a sub-Router along a `pattern`` string.
 	Route(pattern string, fn func(r Router)) Router
 
+	// Mount attaches another http.Handler along ./pattern/*
+	Mount(pattern string, h HandlerFunc)
+
 	// Handle and HandleFunc adds routes for `pattern` that matches
 	// all HTTP methods.
 	Handle(pattern string, h HandlerFunc)
@@ -668,6 +667,10 @@ func (r *router) Route(pattern string, fn func(r Router)) (res Router) {
 
 func (r *router) Method(method, pattern string, handler HandlerFunc) {
 	r.Router.MethodFunc(method, pattern, r.echo.dispatch(handler))
+}
+
+func (r *router) Mount(pattern string, handler HandlerFunc) {
+	r.Router.Mount(pattern, r.echo.dispatch(handler))
 }
 
 func (r *router) Handle(pattern string, handler HandlerFunc) {
