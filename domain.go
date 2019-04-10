@@ -191,8 +191,8 @@ func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, erro
 	return loc.Resources.Fetch(ctx, id)
 }
 
-func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (DataSet, error) {
-	return loc.DataSets.Fetch(ctx, id)
+func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (ds DataSet, err error) {
+	ds, err = loc.DataSets.Fetch(ctx, id)
 }
 
 func (loc *BaseLocale) Now() time.Time {

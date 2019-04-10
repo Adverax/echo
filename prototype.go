@@ -19,6 +19,7 @@ package echo
 
 import (
 	stdContext "context"
+	"fmt"
 	"github.com/adverax/echo/cache"
 	"github.com/adverax/echo/cache/memory"
 	"github.com/adverax/echo/data"
@@ -38,7 +39,7 @@ func (messages DefaultMessageFamily) Fetch(
 		return msg, nil
 	}
 
-	return "", nil
+	return "", fmt.Errorf("message %d not found", id)
 }
 
 type DefaultResourceFamily map[uint32]string
@@ -51,7 +52,7 @@ func (messages DefaultResourceFamily) Fetch(
 		return msg, nil
 	}
 
-	return "", nil
+	return "", fmt.Errorf("message %d not found", id)
 }
 
 type DefaultDataSetFamily map[uint32]DataSet
@@ -64,7 +65,7 @@ func (family DefaultDataSetFamily) Fetch(
 		return ds, nil
 	}
 
-	return nil, nil
+	return nil, fmt.Errorf("dataset %d not found", id)
 }
 
 type DefaultUrlLinker struct{}
