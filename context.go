@@ -1,6 +1,7 @@
 package echo
 
 import (
+	"bytes"
 	stdContext "context"
 	"encoding/json"
 	"encoding/xml"
@@ -240,7 +241,7 @@ type context struct {
 }
 
 func (c *context) writeContentType(value string) {
-	header := c.Response().Header()
+	header := c.response.Header()
 	if header.Get(HeaderContentType) == "" {
 		header.Set(HeaderContentType, value)
 	}
@@ -692,9 +693,16 @@ func (c *context) Stream(code int, contentType string, r io.Reader) (err error) 
 }
 
 func (c *context) Template(code int, t Template, data interface{}) (err error) {
+	var buf bytes.Buffer
+	err = t.Execute(&buf, data)
+	if err != nil {
+		return err
+	}
+
 	c.writeContentType(MIMETextHTMLCharsetUTF8)
 	c.response.WriteHeader(code)
-	return t.Execute(c.response.Writer, data)
+	_, err = c.response.Write(buf.Bytes())
+	return
 }
 
 func (c *context) File(file string) (err error) {

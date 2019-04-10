@@ -197,23 +197,22 @@ func TestFormComponent_SetValueAndValidate(t *testing.T) {
 		"FormText: Optional value with codec with valid data must be accepted": {
 			field: &FormText{
 				Required: false,
-				Codec:    cities,
+				Codec:    echo.UintCodec,
 			},
 			src: []string{"1"},
 			dst: []string{"1"},
-			val: "1",
+			val: uint(1),
 		},
 
 		"FormText: Optional value with codec with invalid data must be rejected": {
 			field: &FormText{
 				Required: false,
-				Codec:    cities,
+				Codec:    echo.UintCodec,
 			},
-			src: []string{"12345"},
-			dst: []string{"12345"},
-			val: "12345",
+			src: []string{"abc"},
+			dst: []string{"abc"},
 			errors: echo.ValidationErrors{
-				MessageConstraintRequired,
+				echo.ValidationErrorInvalidValue,
 			},
 		},
 

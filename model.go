@@ -62,6 +62,7 @@ func myLoginHandler(ctx echo.Context) error {
 */
 
 type Mapper interface {
+	// Convert external representation to internal representation
 	Execute(name string) (string, bool)
 }
 

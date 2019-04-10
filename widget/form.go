@@ -407,8 +407,7 @@ func (w *FormText) SetValue(
 	if !w.Required && aValue == "" {
 		val, _ = w.Codec.Empty(ctx)
 	} else {
-		_, err = w.Codec.Decode(ctx, aValue)
-		val = aValue
+		val, err = w.Codec.Encode(ctx, aValue)
 	}
 	if err == nil {
 		w.val = val

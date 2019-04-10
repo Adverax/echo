@@ -42,6 +42,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/go-chi/chi"
+	"golang.org/x/crypto/acme/autocert"
+
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -49,9 +51,9 @@ import (
 	"time"
 
 	"github.com/adverax/echo/cache"
+	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"github.com/adverax/echo/log"
-	"golang.org/x/crypto/acme/autocert"
 )
 
 // Echo is the top-level framework instance.
@@ -116,6 +118,14 @@ func (e *Echo) DefaultHTTPErrorHandler(c Context, err error) {
 		code = http.StatusInternalServerError
 		msg  interface{}
 	)
+
+	if err != ErrNotFound {
+		e.Logger.Error(err)
+	}
+
+	if err == data.ErrNoMatch {
+		err = ErrNotFound
+	}
 
 	if he, ok := err.(*HTTPError); ok {
 		code = he.Code
@@ -204,7 +214,7 @@ func (e *Echo) dispatch(handler HandlerFunc) http.HandlerFunc {
 
 		err := handler(c)
 		if err != nil {
-			e.HTTPErrorHandler(c, err)
+			c.Error(err)
 		}
 	}
 }

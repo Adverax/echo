@@ -258,7 +258,7 @@ func TestMultiStep(t *testing.T) {
 	assert.Equal(t,
 		generic.Params{
 			"name":   "UltraBank2",
-			"amount": "25",
+			"amount": uint(25),
 		},
 		strategy.amount.result,
 	)
