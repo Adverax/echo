@@ -42,18 +42,18 @@ func myLoginHandler(ctx echo.Context) error {
         Password: "Default password,
 	}
 
-    isImported, err := model.Import(ctx, rec, nil)
-    if err != nil {
-        return err
-    }
-    if isImported {
+    if err := model.Resolve(ctx, rec, nil); err != nil {
+        if err != echo.ErrModelSealed {
+            return err
+        }
+
 		// Record is valid
 		err := model.AssignTo(ctx, &rec)
 		if err != nil {
 			return err
 		}
 		...
-		return nil
+		return ctx.Redirect(http.StatusSeeOther, "...")
     }
 
 	// Show form
@@ -158,28 +158,33 @@ func (model Model) Clone() Model {
 }
 
 // Import and validate data
-func (model Model) Import(
+// Returns ErrModelSealed if model imported and validated.
+func (model Model) Resolve(
 	ctx Context,
 	src interface{}, // Optional data source
 	mapper Mapper, // Optional mapper
-) (bool, error) {
+) error {
 	if src != nil {
 		err := model.AssignFrom(ctx, src, mapper)
 		if err != nil {
-			return false, err
+			return err
 		}
 	}
 
 	if ctx.Request().Method != POST {
-		return false, nil
+		return nil
 	}
 
 	err := model.Bind(ctx)
 	if err != nil {
-		return false, err
+		return err
 	}
 
-	return model.IsValid(), nil
+	if model.IsValid() {
+		return ErrModelSealed
+	}
+
+	return nil
 }
 
 // Bind works with not structured data only.

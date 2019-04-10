@@ -482,6 +482,7 @@ var (
 	ErrCookieNotFound              = errors.New("cookie not found")
 	ErrInvalidCertOrKeyType        = errors.New("invalid cert or key type, must be string or []byte")
 	ErrAbort                       = errors.New("abort")
+	ErrModelSealed                 = errors.New("model is accepted")
 )
 
 // Error handlers
