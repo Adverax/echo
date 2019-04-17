@@ -48,7 +48,7 @@ func myLoginHandler(ctx echo.Context) error {
         }
 
 		// Record is valid
-		err := model.AssignTo(ctx, &rec)
+		err := model.Export(ctx, &rec)
 		if err != nil {
 			return err
 		}
@@ -61,6 +61,7 @@ func myLoginHandler(ctx echo.Context) error {
 	return nil
 */
 
+// Mapper is abstract converter external field names into internal model field names.
 type Mapper interface {
 	// Convert external representation to internal representation
 	Execute(name string) (string, bool)
@@ -165,7 +166,7 @@ func (model Model) Resolve(
 	mapper Mapper, // Optional mapper
 ) error {
 	if src != nil {
-		err := model.AssignFrom(ctx, src, mapper)
+		err := model.Import(ctx, src, mapper)
 		if err != nil {
 			return err
 		}
@@ -304,7 +305,10 @@ func (model Model) IsValid() bool {
 	return true
 }
 
-func (model Model) AssignFrom(
+// Import imports model data from external structure.
+// External field names can be composite structure.
+// For such fields need mapper, that defien dotted path to the target field.
+func (model Model) Import(
 	ctx Context,
 	src interface{},
 	mapper Mapper,
@@ -317,7 +321,7 @@ func (model Model) AssignFrom(
 		rec = rec.Elem()
 	}
 	if rec.Kind() != reflect.Struct {
-		return fmt.Errorf("invalid type of source")
+		return fmt.Errorf("model.import: invalid type of source")
 	}
 
 	for _, item := range model {
@@ -339,7 +343,10 @@ func (model Model) AssignFrom(
 	return nil
 }
 
-func (model Model) AssignTo(
+// Export exports model data into external structure.
+// External field names can be composite structure.
+// For such fields need mapper, that defien dotted path to the target field.
+func (model Model) Export(
 	ctx Context,
 	dst interface{},
 	mapper Mapper,
@@ -350,7 +357,7 @@ func (model Model) AssignTo(
 
 	rec := reflect.ValueOf(dst).Elem()
 	if rec.Kind() != reflect.Struct {
-		return fmt.Errorf("invalid type of destination")
+		return fmt.Errorf("model.Export: invalid type of destination")
 	}
 
 	for _, item := range model {

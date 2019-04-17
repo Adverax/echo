@@ -183,16 +183,37 @@ func (loc *BaseLocale) ParseDateTime(value string) (time.Time, error) {
 	return time.ParseInLocation(loc.DateTimeFormat, value, loc.Loc)
 }
 
-func (loc *BaseLocale) Message(ctx stdContext.Context, id uint32) (string, error) {
-	return loc.Messages.Fetch(ctx, id)
+func (loc *BaseLocale) Message(ctx stdContext.Context, id uint32) (msg string, err error) {
+	msg, err = loc.Messages.Fetch(ctx, id)
+	if err != nil {
+		if err == data.ErrNoMatch {
+			return "", fmt.Errorf("message %d not found", id)
+		}
+		return "", err
+	}
+	return
 }
 
-func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (string, error) {
-	return loc.Resources.Fetch(ctx, id)
+func (loc *BaseLocale) Resource(ctx stdContext.Context, id uint32) (msg string, err error) {
+	msg, err = loc.Resources.Fetch(ctx, id)
+	if err != nil {
+		if err == data.ErrNoMatch {
+			return "", fmt.Errorf("resource %d not found", id)
+		}
+		return "", err
+	}
+	return
 }
 
 func (loc *BaseLocale) DataSet(ctx stdContext.Context, id uint32) (ds DataSet, err error) {
 	ds, err = loc.DataSets.Fetch(ctx, id)
+	if err != nil {
+		if err == data.ErrNoMatch {
+			return nil, fmt.Errorf("dataset %d not found", id)
+		}
+		return nil, err
+	}
+	return
 }
 
 func (loc *BaseLocale) Now() time.Time {

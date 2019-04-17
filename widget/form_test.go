@@ -444,7 +444,7 @@ func TestModel_AssignFrom(t *testing.T) {
 		Username: "Bob",
 	}
 
-	err := model.AssignFrom(ctx, rec, nil)
+	err := model.Import(ctx, rec, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "Bob", username.GetString())
 }
@@ -474,7 +474,7 @@ func TestModel_AssignTo(t *testing.T) {
 		Password string
 	}
 
-	err := model.AssignTo(ctx, &rec, nil)
+	err := model.Export(ctx, &rec, nil)
 	assert.NoError(t, err)
 	assert.Equal(t, "Bob", rec.Username)
 }
