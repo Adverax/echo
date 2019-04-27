@@ -898,7 +898,13 @@ func (t *tx) Level() int16 {
 }
 
 func (t *tx) Begin() (Tx, error) {
-	return t.Begin()
+	res := &txx{tx{db: t.db, trans: t.trans, level: t.level + 1}, true}
+	query := "SAVEPOINT " + res.getSavePoint()
+	_, err := t.Exec(query)
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
 }
 
 func (t *tx) BeginTx(ctx context.Context, opts *TxOptions) (Tx, error) {
@@ -1052,9 +1058,9 @@ func (repository *repository) Database() DB {
 func (repository *repository) Scope(
 	ctx context.Context,
 ) Scope {
-	db := FromContext(ctx, repository.db.DbId())
-	if db != nil {
-		return db
+	s := FromContext(ctx, repository.db.DbId())
+	if s != nil {
+		return s
 	}
 	return repository.db
 }
