@@ -1048,7 +1048,9 @@ type Repository interface {
 }
 
 type repository struct {
-	db DB
+	db                  DB
+	maxDeadlockDuration time.Duration
+	deadlockPause       time.Duration
 }
 
 func (repository *repository) Database() DB {
@@ -1069,7 +1071,18 @@ func (repository *repository) Transaction(
 	ctx context.Context,
 	action func(ctx context.Context, scope Scope) error,
 ) (err error) {
-	for i := 0; i < 100; i++ {
+	org := time.Now()
+	maxDeadlockDuration := repository.maxDeadlockDuration
+	if maxDeadlockDuration == 0 {
+		maxDeadlockDuration = time.Second
+	}
+
+	deadlockPause := repository.deadlockPause
+	if deadlockPause == 0 {
+		deadlockPause = 10 * time.Microsecond
+	}
+
+	for {
 		err = repository.transaction(ctx, action)
 		if err == nil {
 			return nil
@@ -1078,9 +1091,14 @@ func (repository *repository) Transaction(
 		if !repository.db.Adapter().IsDeadlock(repository.db, err) {
 			return err
 		}
-	}
 
-	return
+		duration := time.Now().Sub(org)
+		if duration > maxDeadlockDuration {
+			return err
+		}
+
+		time.Sleep(deadlockPause)
+	}
 }
 
 func (repository *repository) transaction(
@@ -1101,8 +1119,16 @@ func (repository *repository) transaction(
 	return scope.Commit()
 }
 
-func NewRepository(db DB) Repository {
-	return &repository{db: db}
+func NewRepository(
+	db DB,
+	maxDeadlockDuration time.Duration,
+	deadlockPause time.Duration,
+) Repository {
+	return &repository{
+		db:                  db,
+		maxDeadlockDuration: maxDeadlockDuration,
+		deadlockPause:       deadlockPause,
+	}
 }
 
 func recode(err error) error {
