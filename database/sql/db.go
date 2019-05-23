@@ -1049,7 +1049,6 @@ type Repository interface {
 
 const (
 	MaxDeadlockDuration = time.Second
-	DeadlockPause       = 5 * time.Microsecond
 )
 
 type repository struct {
@@ -1075,6 +1074,7 @@ func (repository *repository) Transaction(
 	action func(ctx context.Context, scope Scope) error,
 ) (err error) {
 	org := time.Now()
+	pause := time.Microsecond
 	for {
 		err = repository.transaction(ctx, action)
 		if err == nil {
@@ -1090,7 +1090,8 @@ func (repository *repository) Transaction(
 			return err
 		}
 
-		time.Sleep(DeadlockPause)
+		time.Sleep(pause)
+		pause *= 2
 	}
 }
 
