@@ -1114,13 +1114,9 @@ func (repository *repository) transaction(
 
 func NewRepository(
 	db DB,
-	maxDeadlockDuration time.Duration,
-	deadlockPause time.Duration,
 ) Repository {
 	return &repository{
-		db:                  db,
-		maxDeadlockDuration: maxDeadlockDuration,
-		deadlockPause:       deadlockPause,
+		db: db,
 	}
 }
 
