@@ -340,15 +340,15 @@ func (w *MultiStepForm) restart(
 ) error {
 	id := strconv.FormatUint(w.getSecurity(ctx).CreateGuid(), 10)
 
-	values := make(generic.Params, 16)
-	stage, err := w.Strategy.Setup(ctx, values)
+	params := make(generic.Params, 16)
+	stage, err := w.Strategy.Setup(ctx, params)
 	if err != nil || stage == "" {
 		return err
 	}
 
 	state := &MultiStepState{
 		Stage:      stage,
-		Params:     values,
+		Params:     params,
 		History:    make([]string, 0, 8),
 		Expiration: time.Now().Add(w.Timeout).Unix(),
 	}
@@ -414,7 +414,7 @@ func AddMultiStepHandler(
 	handler echo.HandlerFunc,
 ) {
 	// Undo multistep form
-	router.Get("/:id/{undo}", handler)
+	router.Get("/{id}/{undo}", handler)
 
 	// Stage multistep form
 	router.Form("/{id}", handler)
