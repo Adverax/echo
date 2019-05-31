@@ -20,10 +20,10 @@ package cache
 import "time"
 
 type Cache interface {
-	// Get value by key.
+	// Get value by key. Returns data.ErrNoMatch, if has no key.
 	Get(key string, dst interface{}) error
 	// GetMulti is a batch version of Get.
-	GetMulti(dict map[string]interface{}) error
+	GetMulti(dict map[string]interface{}) (notFound []string, err error)
 	// Set value with key and expire time.
 	Set(key string, val interface{}, timeout time.Duration) error
 	// Check if value exists or not.

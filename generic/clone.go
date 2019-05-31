@@ -18,6 +18,7 @@
 package generic
 
 import (
+	"errors"
 	"reflect"
 )
 
@@ -28,29 +29,26 @@ import (
 //  	b string
 //  	c []string
 //  }
-//  old := &data{
+//  src := &data{
 //   "works1",
 //   "works2",
 //    []string{"a", "b"},
 //  }
-//  var new *data = &data{}
-//  CloneValueTo(old, new)
-//  old.c = append(old.c, "c")
-//  fmt.Println(old)
-// fmt.Println(new)
+//  var dst data
+//  CloneValueTo(&dst, src)
+//  src.c = append(src.c, "c")
+//  fmt.Println(src)
+//  fmt.Println(dst)
 // So you can pass any type at run time as long as you're sure that source and
 // destin are both of the same type, (and destin is a pointer to that type).
 func CloneValueTo(dst interface{}, src interface{}) {
-	x := reflect.ValueOf(src)
-	if x.Kind() == reflect.Ptr {
-		starX := x.Elem()
-		y := reflect.New(starX.Type())
-		starY := y.Elem()
-		starY.Set(starX)
-		reflect.ValueOf(dst).Elem().Set(y.Elem())
-	} else {
-		dst = x.Interface()
+	y := reflect.ValueOf(dst)
+	if y.Kind() != reflect.Ptr {
+		panic(errors.New("invalid dst type"))
 	}
+	starY := y.Elem()
+	x := reflect.ValueOf(src)
+	starY.Set(x)
 }
 
 func CloneValue(src interface{}) interface{} {

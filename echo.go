@@ -41,6 +41,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/adverax/echo/sync/arbiter"
 	"github.com/go-chi/chi"
 	"golang.org/x/crypto/acme/autocert"
 
@@ -80,6 +81,7 @@ type Echo struct {
 	Messages         MessageManager
 	Resources        ResourceManager
 	DataSets         DataSetManager
+	Arbiter          arbiter.Arbiter
 }
 
 // NewContext returns a Context instance.
@@ -506,6 +508,7 @@ func New() (e *Echo) {
 		Cache:     Defaults.Cache,
 		Logger:    log.NewDebug("\n"),
 		DataSets:  Defaults.DataSets,
+		Arbiter:   arbiter.NewLocal(),
 		AutoTLSManager: autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		},

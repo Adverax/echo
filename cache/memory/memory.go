@@ -20,6 +20,7 @@ package memory
 import (
 	"container/list"
 	"fmt"
+	"github.com/adverax/echo/data"
 	"hash/fnv"
 	"reflect"
 	"sync"
@@ -103,7 +104,7 @@ func New(options Options) *Cache {
 func (c *Cache) Get(key string, dst interface{}) error {
 	item := c.get(key)
 	if item == nil {
-		return nil
+		return data.ErrNoMatch
 	}
 
 	assign(dst, item.value)
@@ -111,14 +112,16 @@ func (c *Cache) Get(key string, dst interface{}) error {
 }
 
 // Get multiple values from cache.
-func (c *Cache) GetMulti(dict map[string]interface{}) error {
+func (c *Cache) GetMulti(dict map[string]interface{}) (notFound []string, err error) {
 	for key, val := range dict {
 		item := c.get(key)
 		if item != nil {
 			assign(val, item.value)
+		} else {
+			notFound = append(notFound, key)
 		}
 	}
-	return nil
+	return nil, nil
 }
 
 // Set the value in the cache for the specified duration

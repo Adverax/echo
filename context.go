@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
+	"github.com/adverax/echo/data"
+	"github.com/adverax/echo/generic"
 	"github.com/adverax/echo/log"
 	"github.com/go-chi/chi"
 	"io"
@@ -18,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 const (
@@ -825,6 +828,32 @@ func (c *context) AddFlash(class FlashClass, message interface{}) error {
 	c.session.AddFlash(class, msg)
 
 	return nil
+}
+
+func (c *context) LoadFromCacheOrBuild(
+	key string,
+	dst interface{},
+	builder func(ctx Context) (interface{}, error),
+	lifeTime time.Duration,
+) error {
+	e := c.echo
+
+	e.Arbiter.Lock(key)
+	defer e.Arbiter.Unlock(key)
+
+	err := e.Cache.Get(key, dst)
+	if err != data.ErrNoMatch {
+		return err
+	}
+
+	val, err := builder(c)
+	if err != nil {
+		return err
+	}
+
+	generic.CloneValueTo(dst, val)
+
+	return e.Cache.Set(key, val, lifeTime)
 }
 
 func (c *context) Value(key interface{}) interface{} {

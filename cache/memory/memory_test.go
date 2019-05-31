@@ -19,7 +19,7 @@ func TestCache(t *testing.T) {
 	err = c.Get("city1", &vs)
 	require.NoError(t, err)
 	assert.Equal(t, "London", vs)
-	err = c.GetMulti(map[string]interface{}{
+	_, err = c.GetMulti(map[string]interface{}{
 		"city2": &vs,
 		"city1": &vs2,
 	})
