@@ -24,6 +24,7 @@ import (
 	"github.com/adverax/echo/cache/memory"
 	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
+	"github.com/adverax/echo/sync/arbiter"
 	"net/url"
 	"strings"
 	"time"
@@ -125,12 +126,15 @@ var (
 		DataSets        DataSetManager
 		UrlLinker       UrlLinker
 		Cache           cache.Cache
+		Cacher          Cacher
+		Arbiter         arbiter.Arbiter
 		Locale          Locale
 		MessageManager  MessageManager
 		ResourceManager ResourceManager
 		DataSetManager  DataSetManager
 	}{
 		UrlLinker: &DefaultUrlLinker{},
+		Arbiter:   arbiter.NewLocal(),
 		Cache:     memory.New(memory.Options{}),
 		Messages: &DefaultMessageManager{
 			family: DefaultMessages,
@@ -154,3 +158,7 @@ var (
 		},
 	}
 )
+
+func init() {
+	Defaults.Cacher = NewCacher(Defaults.Arbiter, Defaults.Cache)
+}

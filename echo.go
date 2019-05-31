@@ -78,6 +78,7 @@ type Echo struct {
 	Locale           Locale // Prototype
 	UrlLinker        UrlLinker
 	Cache            cache.Cache
+	Cacher           Cacher
 	Messages         MessageManager
 	Resources        ResourceManager
 	DataSets         DataSetManager
@@ -506,9 +507,10 @@ func New() (e *Echo) {
 		Locale:    Defaults.Locale,
 		UrlLinker: Defaults.UrlLinker,
 		Cache:     Defaults.Cache,
+		Cacher:    Defaults.Cacher,
+		Arbiter:   Defaults.Arbiter,
 		Logger:    log.NewDebug("\n"),
 		DataSets:  Defaults.DataSets,
-		Arbiter:   arbiter.NewLocal(),
 		AutoTLSManager: autocert.Manager{
 			Prompt: autocert.AcceptTOS,
 		},

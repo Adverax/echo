@@ -6,8 +6,6 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"fmt"
-	"github.com/adverax/echo/data"
-	"github.com/adverax/echo/generic"
 	"github.com/adverax/echo/log"
 	"github.com/go-chi/chi"
 	"io"
@@ -20,7 +18,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 )
 
 const (
@@ -227,21 +224,6 @@ type Context interface {
 
 	// Add flash message
 	AddFlash(class FlashClass, message interface{}) error
-
-	// Load data from cache or build data
-	LoadFromCacheOrBuild(
-		key string, // Cache key
-		dst interface{}, // Data receiver
-		builder func(ctx Context) (interface{}, error), // Data builder
-		lifeTime time.Duration, // Life time for data caching
-	) error
-
-	// Load page from cache or build
-	LoadHtmlFromCacheOrBuild(
-		key string, // Cache key
-		builder func(ctx Context) (tpl Template, data interface{}, err error), // Html builder
-		lifeTime time.Duration, // Life time for html caching
-	) (html string, err error)
 }
 
 type context struct {
@@ -843,59 +825,6 @@ func (c *context) AddFlash(class FlashClass, message interface{}) error {
 	c.session.AddFlash(class, msg)
 
 	return nil
-}
-
-func (c *context) LoadFromCacheOrBuild(
-	key string,
-	dst interface{},
-	builder func(ctx Context) (interface{}, error),
-	lifeTime time.Duration,
-) error {
-	e := c.echo
-
-	e.Arbiter.Lock(key)
-	defer e.Arbiter.Unlock(key)
-
-	err := e.Cache.Get(key, dst)
-	if err != data.ErrNoMatch {
-		return err
-	}
-
-	val, err := builder(c)
-	if err != nil {
-		return err
-	}
-
-	generic.CloneValueTo(dst, val)
-
-	return e.Cache.Set(key, val, lifeTime)
-}
-
-func (c *context) LoadHtmlFromCacheOrBuild(
-	key string,
-	builder func(ctx Context) (tpl Template, data interface{}, err error),
-	lifeTime time.Duration,
-) (html string, err error) {
-	err = c.LoadFromCacheOrBuild(
-		key,
-		&html,
-		func(ctx Context) (interface{}, error) {
-			tpl, params, err := builder(ctx)
-			if err != nil {
-				return nil, err
-			}
-
-			var buf bytes.Buffer
-			err = tpl.Execute(&buf, params)
-			if err != nil {
-				return nil, err
-			}
-
-			return buf.String(), nil
-		},
-		lifeTime,
-	)
-	return
 }
 
 func (c *context) Value(key interface{}) interface{} {
