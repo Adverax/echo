@@ -235,6 +235,13 @@ type Context interface {
 		builder func(ctx Context) (interface{}, error), // Data builder
 		lifeTime time.Duration, // Life time for data caching
 	) error
+
+	// Load page from cache or build
+	LoadHtmlFromCacheOrBuild(
+		key string, // Cache key
+		builder func(ctx Context) (tpl Template, data interface{}, err error), // Html builder
+		lifeTime time.Duration, // Life time for html caching
+	) (html string, err error)
 }
 
 type context struct {
@@ -862,6 +869,33 @@ func (c *context) LoadFromCacheOrBuild(
 	generic.CloneValueTo(dst, val)
 
 	return e.Cache.Set(key, val, lifeTime)
+}
+
+func (c *context) LoadHtmlFromCacheOrBuild(
+	key string,
+	builder func(ctx Context) (tpl Template, data interface{}, err error),
+	lifeTime time.Duration,
+) (html string, err error) {
+	err = c.LoadFromCacheOrBuild(
+		key,
+		&html,
+		func(ctx Context) (interface{}, error) {
+			tpl, params, err := builder(ctx)
+			if err != nil {
+				return nil, err
+			}
+
+			var buf bytes.Buffer
+			err = tpl.Execute(&buf, params)
+			if err != nil {
+				return nil, err
+			}
+
+			return buf.String(), nil
+		},
+		lifeTime,
+	)
+	return
 }
 
 func (c *context) Value(key interface{}) interface{} {
