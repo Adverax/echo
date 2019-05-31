@@ -227,6 +227,14 @@ type Context interface {
 
 	// Add flash message
 	AddFlash(class FlashClass, message interface{}) error
+
+	// Load data from cache or build data
+	LoadFromCacheOrBuild(
+		key string, // Cache key
+		dst interface{}, // Data receiver
+		builder func(ctx Context) (interface{}, error), // Data builder
+		lifeTime time.Duration, // Life time for data caching
+	) error
 }
 
 type context struct {
