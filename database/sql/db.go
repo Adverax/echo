@@ -1039,11 +1039,14 @@ var (
 )
 
 type Repository interface {
+	// Find actual scope
 	Scope(ctx context.Context) Scope
+	// Get database
 	Database() DB
+	// Execute transaction
 	Transaction(
 		ctx context.Context,
-		action func(ctx context.Context, scope Scope) error,
+		action func(ctx context.Context) error,
 	) error
 }
 
@@ -1071,7 +1074,7 @@ func (repository *repository) Scope(
 
 func (repository *repository) Transaction(
 	ctx context.Context,
-	action func(ctx context.Context, scope Scope) error,
+	action func(ctx context.Context) error,
 ) (err error) {
 	org := time.Now()
 	pause := time.Microsecond
@@ -1097,7 +1100,7 @@ func (repository *repository) Transaction(
 
 func (repository *repository) transaction(
 	ctx context.Context,
-	action func(ctx context.Context, scope Scope) error,
+	action func(ctx context.Context) error,
 ) error {
 	scope, err := repository.Scope(ctx).Begin()
 	if err != nil {
@@ -1105,7 +1108,7 @@ func (repository *repository) transaction(
 	}
 	defer scope.Rollback()
 
-	err = action(ToContext(ctx, scope), scope)
+	err = action(ToContext(ctx, scope))
 	if err != nil {
 		return err
 	}

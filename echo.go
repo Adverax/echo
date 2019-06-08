@@ -41,6 +41,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fmt"
+	"github.com/adverax/echo/cacher"
 	"github.com/adverax/echo/sync/arbiter"
 	"github.com/go-chi/chi"
 	"golang.org/x/crypto/acme/autocert"
@@ -78,7 +79,7 @@ type Echo struct {
 	Locale           Locale // Prototype
 	UrlLinker        UrlLinker
 	Cache            cache.Cache
-	Cacher           Cacher
+	Cacher           cacher.Cacher
 	Messages         MessageManager
 	Resources        ResourceManager
 	DataSets         DataSetManager

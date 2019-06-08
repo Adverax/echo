@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"github.com/adverax/echo/cache"
 	"github.com/adverax/echo/cache/memory"
+	"github.com/adverax/echo/cacher"
+	memStorage "github.com/adverax/echo/cacher/memory"
 	"github.com/adverax/echo/data"
 	"github.com/adverax/echo/generic"
 	"github.com/adverax/echo/sync/arbiter"
@@ -126,7 +128,7 @@ var (
 		DataSets        DataSetManager
 		UrlLinker       UrlLinker
 		Cache           cache.Cache
-		Cacher          Cacher
+		Cacher          cacher.Cacher
 		Arbiter         arbiter.Arbiter
 		Locale          Locale
 		MessageManager  MessageManager
@@ -160,5 +162,7 @@ var (
 )
 
 func init() {
-	Defaults.Cacher = NewCacher(Defaults.Arbiter, Defaults.Cache)
+	Defaults.Cacher = cacher.New(
+		memStorage.New(Defaults.Arbiter, Defaults.Cache),
+	)
 }
