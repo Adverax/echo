@@ -8,7 +8,7 @@ import (
 )
 
 // Cached is middleware for cache whole html page.
-func Cached(
+func PageCache(
 	e *echo.Echo,
 	class string,
 	dependencies func(c echo.Context) (map[string]string, error),
