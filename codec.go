@@ -1062,6 +1062,13 @@ func NewConverter(codec Codec) Converter {
 	}
 }
 
+func NewCustomConverter(codec Codec, formatter Formatter) Converter {
+	return &converter{
+		Codec:     codec,
+		Formatter: formatter,
+	}
+}
+
 // Abstract pair converter
 type pairs = DataSet
 
@@ -1081,6 +1088,13 @@ func NewPairConverter(codec DataSet) PairConverter {
 		Formatter: &BaseFormatter{
 			Decoder: codec,
 		},
+	}
+}
+
+func NewCustomPairConverter(codec DataSet, formatter Formatter) PairConverter {
+	return &pairConverter{
+		pairs:     codec,
+		Formatter: formatter,
 	}
 }
 

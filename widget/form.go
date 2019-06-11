@@ -950,6 +950,8 @@ func (w *FormHidden) Render(
 		return nil, nil
 	}
 
+	w.init(ctx)
+
 	res, err := w.render(ctx, w.Id, w.Name, nil, false)
 	if err != nil {
 		return nil, err
@@ -965,10 +967,14 @@ func (w *FormHidden) Render(
 
 func (w *FormHidden) Reset(ctx echo.Context) error {
 	w.field.reset()
-	if w.Default != nil {
+	w.init(ctx)
+	return nil
+}
+
+func (w *FormHidden) init(ctx echo.Context) {
+	if w.val == nil && w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
-	return nil
 }
 
 // FormFile represent html entity <input type="file">.
