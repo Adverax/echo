@@ -86,5 +86,6 @@ func New(
 	return &engine{
 		Arbiter: arbiter,
 		Cache:   cache,
+		deps:    make(map[string][]string, 4096),
 	}
 }

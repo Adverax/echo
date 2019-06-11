@@ -16,7 +16,7 @@ func (arbiter *localArbiter) Lock(key string) {
 	arbiter.Mutex.Lock()
 	aLatch, ok := arbiter.latches[key]
 	if !ok {
-		aLatch := new(latch)
+		aLatch = new(latch)
 		arbiter.latches[key] = aLatch
 	}
 	aLatch.usage++
