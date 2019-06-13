@@ -8,14 +8,12 @@ import (
 	"github.com/adverax/echo"
 )
 
-type (
-	// Skipper defines a function to skip middleware. Returning true skips processing
-	// the middleware.
-	Skipper func(echo.Context) bool
+// Skipper defines a function to skip middleware. Returning true skips processing
+// the middleware.
+type Skipper func(echo.Context) bool
 
-	// BeforeFunc defines a function which is executed just before the middleware.
-	BeforeFunc func(echo.Context)
-)
+// BeforeFunc defines a function which is executed just before the middleware.
+type BeforeFunc func(echo.Context)
 
 func captureTokens(pattern *regexp.Regexp, input string) *strings.Replacer {
 	groups := pattern.FindAllStringSubmatch(input, -1)
@@ -33,6 +31,6 @@ func captureTokens(pattern *regexp.Regexp, input string) *strings.Replacer {
 }
 
 // DefaultSkipper returns false which processes the middleware.
-func DefaultSkipper(echo.Context) bool {
+func DefaultSkipper(ctx echo.Context) bool {
 	return false
 }
