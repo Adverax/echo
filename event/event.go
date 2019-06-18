@@ -29,10 +29,14 @@ type Messenger interface {
 	Trigger(ctx context.Context, name string, event interface{}) error
 }
 
-type Publisher interface {
-	Messenger
+type Registrar interface {
 	On(name string, subscriber Subscriber)
 	Off(name string, subscriber *interface{})
+}
+
+type Publisher interface {
+	Messenger
+	Registrar
 }
 
 type publisher struct {

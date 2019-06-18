@@ -82,7 +82,7 @@ func (d *designer) Extends(
 	return &designer{
 		echo:    d.echo,
 		layouts: d.layouts,
-		path:    addTrailingSlash(d.path + path),
+		path:    mergePaths(d.path, path) + "/",
 		funcs:   fs,
 		tpl:     tpl,
 	}
@@ -136,4 +136,20 @@ func addTrailingSlash(path string) string {
 	}
 
 	return path + "/"
+}
+
+func mergePaths(a, b string) string {
+	if !strings.HasSuffix(a, "/") {
+		a = a + "/"
+	}
+
+	if strings.HasPrefix(b, "/") {
+		b = b[1:]
+	}
+
+	if strings.HasSuffix(b, "/") {
+		b = b[:len(b)-1]
+	}
+
+	return a + b
 }

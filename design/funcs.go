@@ -11,6 +11,18 @@ import (
 	"github.com/adverax/echo/generic"
 )
 
+// String functions
+
+// Concat strings with `concat`
+func concat(v ...interface{}) string {
+	var a string
+	for _, b := range v {
+		val, _ := generic.ConvertToString(b)
+		a += val
+	}
+	return a
+}
+
 // Numeric functions
 
 // Sum numbers with `add`
@@ -726,7 +738,10 @@ var genericMap = map[string]interface{}{
 	"coalesce": coalesce,
 	"empty":    empty,
 
-	// basic arithmetic.
+	// Strings
+	"concat": concat,
+
+	// Basic arithmetic.
 	"add":     add,
 	"sub":     sub,
 	"div":     div,

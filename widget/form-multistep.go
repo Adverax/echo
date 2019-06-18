@@ -95,12 +95,12 @@ func (s *MultiStepState) reduce(
 type MultiStepStage interface {
 	// Get model of stage
 	Model(ctx echo.Context, state *MultiStepState) (echo.Model, error)
-	// Publish model
-	Publish(ctx echo.Context, state *MultiStepState, model echo.Model) error
 	// Import data into the model and validate it.
 	Resolve(ctx echo.Context, state *MultiStepState, model echo.Model) error
 	// Consume stage data. Return new state reference or nil (see method MultiStepState.Become)
 	Consume(ctx echo.Context, state *MultiStepState, model echo.Model) (reply interface{}, err error)
+	// Publish form
+	Publish(ctx echo.Context, state *MultiStepState, form *MultiStepForm) error
 }
 
 var MultiStepPrevBtn = &Action{
@@ -128,8 +128,10 @@ func (stage *MultiStepBaseStage) Resolve(
 func (stage *MultiStepBaseStage) Publish(
 	ctx echo.Context,
 	state *MultiStepState,
-	model echo.Model,
+	form *MultiStepForm,
 ) error {
+	model := form.Model
+
 	if len(state.History) != 0 && stage.PrevBtn != nil {
 		model["Prev"] = &Action{
 			Label: stage.PrevBtn.Label,
@@ -144,7 +146,6 @@ func (stage *MultiStepBaseStage) Publish(
 		submit := &FormSubmit{
 			Name:  "action",
 			Label: stage.NextBtn.Label,
-			Items: redoDataSet,
 		}
 		err := submit.SetValue(ctx, []string{"redo"})
 		if err != nil {
@@ -331,7 +332,7 @@ func (w *MultiStepForm) Execute(
 
 	// Publish model
 	w.Model = model
-	return state, stage.Publish(ctx, state, model)
+	return state, stage.Publish(ctx, state, w)
 }
 
 func (w *MultiStepForm) restart(
@@ -422,10 +423,3 @@ func AddMultiStepHandler(
 	// Start multistep form
 	router.Get("/", handler)
 }
-
-var redoDataSet = echo.NewDataSet(
-	map[string]string{
-		"redo": "redo",
-	},
-	false,
-)

@@ -859,6 +859,18 @@ func (w *FormSubmit) Validate(
 ) error {
 	v := simpleValue(w.value)
 	if w.validateRequired(v, w.Required) {
+		if w.Items == nil {
+			if w.Default == nil {
+				return nil
+			}
+			a, _ := generic.ConvertToString(w.Default)
+			b, _ := generic.ConvertToString(v)
+			if a != b {
+				w.AddError(echo.ValidationErrorInvalidValue)
+			}
+			return nil
+		}
+
 		_, err := w.Items.Decode(ctx, w.val)
 		if err != nil {
 			if err != data.ErrNoMatch {
@@ -878,6 +890,8 @@ func (w *FormSubmit) Render(
 		return nil, nil
 	}
 
+	w.init(ctx)
+
 	res, err := w.render(ctx, w.Id, w.Name, w.Label, w.Disabled)
 	if err != nil {
 		return nil, err
@@ -885,6 +899,13 @@ func (w *FormSubmit) Render(
 
 	if w.Required {
 		res["Required"] = true
+	}
+
+	if w.Items == nil {
+		if val := w.GetString(); val != "" {
+			res["Value"] = val
+		}
+		return res, nil
 	}
 
 	Submited := map[string]bool{
@@ -901,8 +922,15 @@ func (w *FormSubmit) Render(
 	return res, nil
 }
 
+func (w *FormSubmit) init(ctx echo.Context) {
+	if w.val == nil && w.Default != nil {
+		w.SetVal(ctx, w.Default)
+	}
+}
+
 func (w *FormSubmit) Reset(ctx echo.Context) error {
 	w.field.reset()
+	w.init(ctx)
 	if w.Default != nil {
 		w.SetVal(ctx, w.Default)
 	}
