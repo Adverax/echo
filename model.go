@@ -162,7 +162,8 @@ func (model Model) Clone() Model {
 // Returns ErrModelSealed if model imported and validated.
 func (model Model) Resolve(
 	ctx Context,
-	src interface{}, // Optional data source
+	src interface{}, // Data source
+	dst interface{}, // Data destination
 	mapper Mapper, // Optional mapper
 ) error {
 	if src != nil {
@@ -182,6 +183,13 @@ func (model Model) Resolve(
 	}
 
 	if model.IsValid() {
+		if dst != nil {
+			err := model.Export(ctx, dst, mapper)
+			if err != nil {
+				return err
+			}
+		}
+
 		return ErrModelSealed
 	}
 

@@ -122,7 +122,7 @@ func (stage *MultiStepBaseStage) Resolve(
 	state *MultiStepState,
 	model echo.Model,
 ) error {
-	return model.Resolve(ctx, nil, nil)
+	return model.Resolve(ctx, nil, nil, nil)
 }
 
 func (stage *MultiStepBaseStage) Publish(
