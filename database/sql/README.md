@@ -5,6 +5,7 @@
 * Allows transparent work with replicas.
 * Supports metrics.
 * Supports nested transactions.
+* Automatic processing of deadlocks.
 * Works with various databases (just provide the appropriate adapter).
 
 ## Usage
@@ -12,12 +13,36 @@
 package main
 
 import (
+	"context"
 	"fmt"
     "log"
 
     "github.com/adverax/echo/database/sql"
     _ "github.com/go-sql-driver/mysql" // Any sql.DB works
 )
+
+type MyRepository struct {
+	sql.Repository
+}
+
+func (repo *MyRepository) Register(
+	ctx context.Context,
+	a, b int,
+) error {
+    return repo.Transaction(
+    	ctx,
+    	func(ctx context.Context)error{
+            scope := repo.Scope(ctx)
+            // Working with scope
+            _, err := scope.Exec("INSERT INTO sometable1 SET somefield = ?", a)
+    		if err != nil {
+    			return err
+    		}
+            _, err = scope.Exec("INSERT INTO sometable2 SET somefield = ?", b)
+            return err
+    	},
+    )
+}
 
 func main() {
   // The first DSN is assumed to be the master and all
@@ -74,13 +99,20 @@ func main() {
   }
 
   // Transactions always use the master
-  tx, err := db.Begin(nil)
+  tx, err := db.Begin()
   if err != nil {
     log.Fatal(err)
   }
   // Do something transactional ...
   if err = tx.Commit(); err != nil {
     log.Fatal(err)
+  }
+  
+  // Register data in the repository
+  r := &MyRepository{Repository: sql.NewRepository(db)}
+  err = r.Register(context.Background(), 10, 20)
+  if err != nil {
+  	log.Fatal(err)
   }
 
   // If needed, one can access the master or a slave explicitly.
