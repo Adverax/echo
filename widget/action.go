@@ -30,14 +30,28 @@ const (
 type ActionType string
 
 // Widget for display button or hyperlink.
+// Example:
+//   apply := &widget.Action{
+//       Label: "Apply",
+//  	 Action: "/user/update",
+//  	 Post: true,
+//  	 Hidden: !isOwner,
+//  	 Type: widget.ActionTypeButton,
+//  	 Value: "apply",
+//   }
+//   submit := &widget.Action{
+//       Label: "Apply",
+//       Type: widget.ActionTypeSubmit,
+//       Value: "apply",
+//   }
 type Action struct {
 	Label    interface{} // Visible label
-	Action   interface{} // Action
+	Action   interface{} // Action (url or url.URL or *url.URL)
 	Confirm  interface{} // Confirmation text
 	Tooltip  interface{} // Widget tooltip
-	Type     ActionType  // Type of action
+	Type     ActionType  // Type of action (default Submit)
 	Post     bool        // Use post request
-	Hidden   bool        // Action is hidden
+	Hidden   bool        // Action is hidden and can't be render
 	Disabled bool        // Action is disabled
 	Name     string      // Name of action
 	Value    interface{} // Value of action

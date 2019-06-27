@@ -25,6 +25,7 @@ import (
 	"github.com/adverax/echo/data"
 )
 
+// Pager statistics
 type PagerInfo struct {
 	CurPage      int // Current page number (the numbering starts from 1)
 	LastPage     int // Last page number (the numbering starts from 1)
@@ -34,11 +35,12 @@ type PagerInfo struct {
 	Count        int // Visible records count
 }
 
+// Report of applying pager
 type PagerReport struct {
-	Id      string                 `json:"id,omitempty"`
-	Info    PagerInfo              `json:"info"`
-	Buttons map[string]interface{} `json:"buttons,omitempty"`
-	Message interface{}            `json:"message,omitempty"`
+	Id      string                 // Pager identifier
+	Info    PagerInfo              // Pager statistics
+	Buttons map[string]interface{} // Buttons (prev, next, band)
+	Message interface{}            // Actual message
 }
 
 func (w *PagerReport) render(
@@ -59,6 +61,9 @@ func (w *PagerReport) render(
 	return res
 }
 
+// Widget for make data pagination. It used for composition in complex widgets (band and table).
+// This is widget get page number from URI. After that, it requests the required
+// data from the provider in the required amount.
 type Pager struct {
 	Id       string        // Pager identifier (optional)
 	MsgEmpty echo.Widget   // Message for empty record set (optional)
@@ -66,7 +71,7 @@ type Pager struct {
 	Label    echo.Widget   // Pager label (optional)
 	Prev     echo.Widget   // Previous page label (optional)
 	Next     echo.Widget   // Next page label (optional)
-	Param    string        // Hot parameter (default "pg")
+	Param    string        // Hot parameter of URI for get page number (default "pg")
 	Capacity int           // Items count per page (default 10). Without data provider it is row count
 	BtnCount int           // Links count in pager (default 10)
 	Url      *url.URL      // Base url (default used current request url)

@@ -52,6 +52,7 @@ func (f ValidatorStringFunc) Validate(ctx Context, value string) error {
 	return f(ctx, value)
 }
 
+// Sting value
 type String struct {
 	Validator ValidatorString
 }
@@ -90,6 +91,7 @@ func (f ValidatorIntFunc) Validate(ctx Context, value int) error {
 	return f(ctx, value)
 }
 
+// Int value
 type Int struct {
 	Min       int
 	Max       int
@@ -167,6 +169,7 @@ func (f ValidatorInt8Func) Validate(ctx Context, value int8) error {
 	return f(ctx, value)
 }
 
+// Int8 value
 type Int8 struct {
 	Min       int8
 	Max       int8
@@ -244,6 +247,7 @@ func (f ValidatorInt16Func) Validate(ctx Context, value int16) error {
 	return f(ctx, value)
 }
 
+// Int16 value
 type Int16 struct {
 	Min       int16
 	Max       int16
@@ -321,6 +325,7 @@ func (f ValidatorInt32Func) Validate(ctx Context, value int32) error {
 	return f(ctx, value)
 }
 
+// Int32 value
 type Int32 struct {
 	Min       int32
 	Max       int32
@@ -398,6 +403,7 @@ func (f ValidatorInt64Func) Validate(ctx Context, value int64) error {
 	return f(ctx, value)
 }
 
+// Int64 value
 type Int64 struct {
 	Min       int64
 	Max       int64
@@ -485,6 +491,7 @@ func (f ValidatorUintFunc) Validate(ctx Context, value uint) error {
 	return f(ctx, value)
 }
 
+// Uint value
 type Uint struct {
 	Min       uint
 	Max       uint
@@ -552,6 +559,7 @@ func (codec *Uint) Format(ctx Context, value interface{}) (val interface{}, err 
 	return formatDefault(ctx, codec, value)
 }
 
+// Uint8 value
 type Uint8 struct {
 	Min       uint8
 	Max       uint8
@@ -629,6 +637,7 @@ func (f ValidatorUint16Func) Validate(ctx Context, value uint16) error {
 	return f(ctx, value)
 }
 
+// Uint16 value
 type Uint16 struct {
 	Min       uint16
 	Max       uint16
@@ -706,6 +715,7 @@ func (f ValidatorUint32Func) Validate(ctx Context, value uint32) error {
 	return f(ctx, value)
 }
 
+// Uint32 value
 type Uint32 struct {
 	Min       uint32
 	Max       uint32
@@ -783,6 +793,7 @@ func (f ValidatorUint64Func) Validate(ctx Context, value uint64) error {
 	return f(ctx, value)
 }
 
+// Uint64 value
 type Uint64 struct {
 	Min       uint64
 	Max       uint64
@@ -860,6 +871,7 @@ func (f ValidatorFloat32Func) Validate(ctx Context, value float32) error {
 	return f(ctx, value)
 }
 
+// Float32 value
 type Float32 struct {
 	Min       float32
 	Max       float32
@@ -937,6 +949,7 @@ func (f ValidatorFloat64Func) Validate(ctx Context, value float64) error {
 	return f(ctx, value)
 }
 
+// Float64 value
 type Float64 struct {
 	Min       float64
 	Max       float64

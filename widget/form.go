@@ -29,14 +29,14 @@ import (
 	"github.com/adverax/echo/generic"
 )
 
-// MultiForm contains list of models.
+// MultiForm is form, that contains list of models.
 type MultiForm struct {
 	Id     string      // Form identifier
 	Name   string      // Form name
-	Method string      // Form method
-	Action interface{} // Form action
+	Method string      // Form method (default POST)
+	Action interface{} // Form action (default current url)
 	Models echo.Models // Primary form model
-	Hidden bool        // Form is hidden
+	Hidden bool        // Form is hidden and can't be render
 }
 
 func (w *MultiForm) Render(
@@ -81,14 +81,14 @@ func (w *MultiForm) Render(
 	return res, nil
 }
 
-// Form based on a Model
+// Form is widget, that based on a Model and produced html form.
 type Form struct {
 	Id     string      // Form identifier
 	Name   string      // Form name
-	Method string      // Form method
-	Action interface{} // Form action
+	Method string      // Form method (default POST)
+	Action interface{} // Form action (default current URL)
 	Model  echo.Model  // Primary form model
-	Hidden bool        // Form is hidden
+	Hidden bool        // Form is hidden and can't be render
 }
 
 func (w *Form) Render(
@@ -135,6 +135,7 @@ func (w *Form) Render(
 
 type FormFieldFilterFunc func(value string) string
 
+// Base of field definition
 type field struct {
 	val    interface{}           // Internal representation of value
 	value  []string              // External representation of value
@@ -348,13 +349,13 @@ type FormText struct {
 	Name        string              // Field name
 	Label       interface{}         // Field label
 	Disabled    bool                // Field disabled
-	Hidden      bool                // Field is hidden (not rendered)
-	Filter      FormFieldFilterFunc // Custom filter
+	Hidden      bool                // Field is hidden and can't be render
+	Filter      FormFieldFilterFunc // Custom filter (optional)
 	Codec       echo.Codec          // Field codec (optional)
-	Default     interface{}         // Default value
+	Default     interface{}         // Default value (optional)
 	Required    bool                // Field is required
-	Pattern     string              // Field pattern
-	Placeholder interface{}         // Field placeholder
+	Pattern     string              // Field pattern (optional)
+	Placeholder interface{}         // Field placeholder (optional)
 	MaxLength   int                 // Field max length
 	ReadOnly    bool                // Field is read only
 	Rows        int                 // Max count of visible rows
@@ -520,9 +521,9 @@ type FormSelect struct {
 	Name     string              // Field name
 	Label    interface{}         // Field label
 	Disabled bool                // Field disabled
-	Hidden   bool                // Field is hidden (not rendered)
-	Filter   FormFieldFilterFunc // Custom filter
-	Default  interface{}         // Default value
+	Hidden   bool                // Field is hidden and can't be render
+	Filter   FormFieldFilterFunc // Custom filter (optional)
+	Default  interface{}         // Default value (optional)
 	Required bool                // Value is required
 	Items    echo.DataSet        // Field items
 }
@@ -635,10 +636,10 @@ type FormFlag struct {
 	Name        string              // Field name
 	Label       interface{}         // Field label
 	Disabled    bool                // Field disabled
-	Hidden      bool                // Field is hidden (not rendered)
-	Default     interface{}         // Default value
-	Placeholder interface{}         // Placeholder text
-	Filter      FormFieldFilterFunc // Custom filter
+	Hidden      bool                // Field is hidden and can't be render
+	Default     interface{}         // Default value (optional)
+	Placeholder interface{}         // Placeholder text (optional)
+	Filter      FormFieldFilterFunc // Custom filter (optional)
 }
 
 func (w *FormFlag) GetName() string {
@@ -725,11 +726,11 @@ type FormFlags struct {
 	Name        string              // Field name
 	Label       interface{}         // Field label
 	Disabled    bool                // Field disabled
-	Hidden      bool                // Field is hidden (not rendered)
-	Filter      FormFieldFilterFunc // Custom filter
-	Default     interface{}         // Default value
+	Hidden      bool                // Field is hidden and can't be render
+	Filter      FormFieldFilterFunc // Custom filter (optional)
+	Default     interface{}         // Default value (optional)
 	Items       echo.DataSet        // List labels for allowed values
-	Placeholder interface{}         // Placeholder text
+	Placeholder interface{}         // Placeholder text (optional)
 }
 
 func (w *FormFlags) GetName() string {
@@ -827,9 +828,9 @@ type FormSubmit struct {
 	Name     string              // Field name
 	Label    interface{}         // Field label
 	Disabled bool                // Field disabled
-	Hidden   bool                // Field is hidden (not rendered)
-	Filter   FormFieldFilterFunc // Custom filter
-	Default  interface{}         // Default value
+	Hidden   bool                // Field is hidden and can't be render
+	Filter   FormFieldFilterFunc // Custom filter (optional)
+	Default  interface{}         // Default value (optional)
 	Required bool                // Value is required
 	Items    echo.DataSet        // Field items
 }
@@ -942,8 +943,8 @@ type FormHidden struct {
 	field
 	Id        string      // Field identifier
 	Name      string      // Field name
-	Hidden    bool        // Field is hidden (not rendered)
-	Default   interface{} // Default value
+	Hidden    bool        // Field is hidden and can't be render
+	Default   interface{} // Default value (optional)
 	Required  bool        // Field is required
 	Pattern   string      // Field pattern
 	MaxLength int         // Field max length
@@ -1012,7 +1013,7 @@ type FormFile struct {
 	Name     string      // Field name
 	Label    interface{} // Field label
 	Disabled bool        // Field disabled
-	Hidden   bool        // Field is hidden (not rendered)
+	Hidden   bool        // Field is hidden and can't be render
 	Accept   string      // Accept filter
 	Required bool        // Field is required
 }

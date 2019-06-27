@@ -26,7 +26,7 @@ import (
 type Band struct {
 	Pager           // Pager info
 	Data   DataFunc // Custom data
-	Hidden bool     // Band is hidden
+	Hidden bool     // Band is hidden and not can't be render
 }
 
 func (w *Band) Render(ctx echo.Context) (interface{}, error) {

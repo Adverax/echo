@@ -36,10 +36,11 @@ type GuidMaker interface {
 
 type DataFunc func() (interface{}, error)
 
-type ExpanderFund func(data map[string]interface{}) error
+type ExpanderFunc func(data map[string]interface{}) error
 
+// Formatters for standard types
 var (
-	BoolFormatter    echo.Formatter
+	BoolFormatter    echo.Formatter // Must be defined in application level
 	StringFormatter  = &echo.BaseFormatter{Decoder: echo.StringCodec}
 	IntFormatter     = &echo.BaseFormatter{Decoder: echo.IntCodec}
 	Int8Formatter    = &echo.BaseFormatter{Decoder: echo.Int8Codec}
@@ -81,6 +82,8 @@ func DeclareDefaultMsg(msg MESSAGE, message string) MESSAGE {
 	return msg
 }
 
+// Map of widgets, that renders each widget.
+// The map allows named access to the item.
 type Map map[string]interface{}
 
 func (ws Map) Render(ctx echo.Context) (interface{}, error) {
@@ -95,22 +98,26 @@ func (ws Map) Clone() Map {
 	return res
 }
 
+// List of widgets, that renders each widget.
+// The list allows index access to the item.
 type List []interface{}
 
 func (ws List) Render(ctx echo.Context) (interface{}, error) {
 	return RenderList(ctx, ws)
 }
 
+// WidgetFunc allows use custom function as Widget.
 type WidgetFunc func(ctx echo.Context) (interface{}, error)
 
 func (fn WidgetFunc) Render(ctx echo.Context) (interface{}, error) {
 	return fn(ctx)
 }
 
-// Optional content
+// Optional content.
+// Widget allows wrap optional content for disable it rendering.
 type Optional struct {
-	Hidden bool
-	Value  interface{}
+	Hidden bool        // Content is hidden and can't be render
+	Value  interface{} // Internal content
 }
 
 func (w *Optional) Render(ctx echo.Context) (interface{}, error) {
@@ -321,13 +328,14 @@ func (w DURATION) Render(ctx echo.Context) (interface{}, error) {
 	return fmt.Sprintf("%d %d:%d:%d", w, hour, min, sec), nil
 }
 
+// Striped Html text
 type HTML template.HTML
 
 func (w HTML) Render(ctx echo.Context) (interface{}, error) {
 	return template.HTML(w), nil
 }
 
-// Sprintf is util for format layout (using fmt.Sprintf)
+// Sprintf is widget for format layout (using fmt.Sprintf)
 type Sprintf struct {
 	Layout interface{}   // Layout
 	Params []interface{} // Message parameters
@@ -355,7 +363,7 @@ func (w *Sprintf) Error() string {
 	return "Validation error"
 }
 
-// Document is util for format with complex named params and references.
+// Document is widget for format with complex named params and references.
 type Document struct {
 	Layout      interface{}            // Layout
 	Params      generic.Params         // Message arguments
@@ -510,8 +518,8 @@ var (
 
 // Any value with formatter
 type Variant struct {
-	echo.Formatter
-	Value interface{}
+	echo.Formatter             // Strategy for format data
+	Value          interface{} // Raw data, that need formats
 }
 
 func (w *Variant) Render(ctx echo.Context) (interface{}, error) {
@@ -528,6 +536,7 @@ func (w *Variant) Render(ctx echo.Context) (interface{}, error) {
 	return val, nil
 }
 
+// Convert value into Html.
 func ConvertToHtml(v interface{}) (string, error) {
 	switch val := v.(type) {
 	case template.HTML:
@@ -538,6 +547,7 @@ func ConvertToHtml(v interface{}) (string, error) {
 	}
 }
 
+// Render map of values.
 func RenderMap(
 	ctx echo.Context,
 	widgets Map,
@@ -562,6 +572,7 @@ func RenderMap(
 	return res, nil
 }
 
+// Render list of values.
 func RenderList(
 	ctx echo.Context,
 	list List,
@@ -602,7 +613,7 @@ func RenderValidationErrors(
 	return errs, nil
 }
 
-// Render link without escape
+// Render link without escape.
 func RenderLink(
 	ctx echo.Context,
 	v interface{},
@@ -619,6 +630,7 @@ func RenderLink(
 	}
 }
 
+// Render data set
 func RenderDataSet(
 	ctx echo.Context,
 	dataset echo.DataSet,
@@ -659,6 +671,7 @@ func RenderDataSet(
 	return rows, nil
 }
 
+// Simple message formatter with fmt.Sprintf util.
 func FormatMessage(
 	ctx echo.Context,
 	layout interface{},
@@ -681,6 +694,7 @@ func FormatMessage(
 	return fmt.Sprintf(format, params...), nil
 }
 
+// Translate striped parameters into plain representation.
 func RenderParams(
 	ctx echo.Context,
 	params []interface{},
@@ -704,6 +718,7 @@ func RenderParams(
 	return list, nil
 }
 
+// Escape url in string format.
 func escapeUrl(u string) (template.URL, error) {
 	uu, err := url.Parse(u)
 	if err != nil {

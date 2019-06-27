@@ -42,16 +42,12 @@ func myLoginHandler(ctx echo.Context) error {
         Password: "Default password,
 	}
 
-    if err := model.Resolve(ctx, rec, nil); err != nil {
+    if err := model.Resolve(ctx, &rec, &rec, nil); err != nil {
         if err != echo.ErrModelSealed {
             return err
         }
 
 		// Record is valid
-		err := model.Export(ctx, &rec)
-		if err != nil {
-			return err
-		}
 		...
 		return ctx.Redirect(http.StatusSeeOther, "...")
     }

@@ -199,8 +199,8 @@ func TestRenderWidget(t *testing.T) {
 
 		"Alert": {
 			src: &Alert{
-				Type:    AlertSuccess,
-				Message: "message",
+				Type:  AlertSuccess,
+				Label: "message",
 			},
 			dst: `{"Message":"message","Type":"siccess"}`,
 		},

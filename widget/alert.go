@@ -31,27 +31,37 @@ const (
 type AlertType string
 
 // Widget for display highlighted message.
+// May be used for display Flash messages.
+// Example:
+//   alert := &widget.Alert{
+//  	Label: "It`s OK"
+//  	Type: widget.AlertSuccess,
+//  }
 type Alert struct {
-	Hidden  bool        // Message is hidden
-	Type    AlertType   // Type of message
-	Message interface{} // Content of message
+	Hidden bool        // Message is hidden and can't be render
+	Type   AlertType   // Type of message (default Info)
+	Label  interface{} // Content of message
 }
 
 func (w *Alert) Render(
 	ctx echo.Context,
 ) (interface{}, error) {
-	if w.Message == nil || w.Hidden {
+	if w.Label == nil || w.Hidden {
 		return nil, nil
 	}
 
-	message, err := echo.RenderWidget(ctx, w.Message)
+	message, err := echo.RenderWidget(ctx, w.Label)
 	if err != nil || message == nil {
 		return nil, err
 	}
 
 	res := make(map[string]interface{}, 4)
-	res["Type"] = w.Type
-	res["Message"] = w.Message
+	if w.Type == "" {
+		res["Type"] = AlertInfo
+	} else {
+		res["Type"] = w.Type
+	}
+	res["Message"] = w.Label
 
 	return res, nil
 }

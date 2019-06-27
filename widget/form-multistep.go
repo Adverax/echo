@@ -30,6 +30,7 @@ import (
 	"github.com/adverax/echo/security"
 )
 
+// MultiStepState is persistent state of form/
 type MultiStepState struct {
 	Stage      string         `json:"stage"`      // Stage name
 	History    []string       `json:"history"`    // List of stage names
@@ -92,6 +93,7 @@ func (s *MultiStepState) reduce(
 	return nil
 }
 
+// Abstract stage of form
 type MultiStepStage interface {
 	// Get model of stage
 	Model(ctx echo.Context, state *MultiStepState) (echo.Model, error)
@@ -103,10 +105,12 @@ type MultiStepStage interface {
 	Publish(ctx echo.Context, state *MultiStepState, form *MultiStepForm) error
 }
 
+// Default definition of PREV button for multistep form.
 var MultiStepPrevBtn = &Action{
 	Label: MessageMultistepFormPrev,
 }
 
+// Default definition of NEXT button for multistep form.
 var MultiStepNextBtn = &Action{
 	Label: MessageMultistepFormNext,
 }
@@ -174,7 +178,7 @@ type MultiStepStrategy interface {
 
 // Multi step form (with standard buttons)
 // Example:
-// func actionXXX(){
+// func actionXXX(ctx echo.Context) error{
 //   form := &widget.MultiStepForm{
 //     Strategy: MyStrategy,
 //     Security: security,
@@ -190,7 +194,7 @@ type MultiStepStrategy interface {
 // }
 //
 // Initialize router
-// func Setup(){
+// func Init(){
 //    InitMultiStepRouter(router, actionXXX)
 // }
 type MultiStepForm struct {

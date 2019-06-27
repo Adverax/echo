@@ -21,7 +21,37 @@ import (
 	"github.com/adverax/echo"
 )
 
-// Widget for display primary navigation bar
+// Widget for display primary navigation bar.
+// Example:
+//   menu := &widget.NavBar{
+//		Brand: "My brand",
+//		Items: widget.Map{
+//			"Home": &widget.NavBarItem{
+//		         Label:  "Home",
+//		         Action: "/",
+//	        },
+//			"Auth": &widget.NavBarItem{
+//				Label:  "Login",
+//				Action: "/login",
+//			},
+//			"Language": &widget.NavBarDropDown{
+//				Label: &widget.Sprintf{
+//					Layout: "Language (%s)",
+//					Params: []interface{}{curLang},
+//				},
+//				Items: widget.List{
+//                  &widget.NavBarItem{
+//				        Label:  "English",
+//				        Action: "/lang/english",
+//			        },
+//                  &widget.NavBarItem{
+//				        Label:  "Russian",
+//				        Action: "/lang/russian",
+//			        },
+//				},
+//			},
+//		},
+//	 }
 type NavBar struct {
 	Brand interface{} // Brand
 	Items Map         // Nav bar items
@@ -46,12 +76,13 @@ func (w *NavBar) Render(ctx echo.Context) (interface{}, error) {
 	return res, nil
 }
 
+// Simple menu item of navigation bar.
 // Must be nested for NavBarNav or NavBarDropDown.
 type NavBarItem struct {
 	Label  interface{} // Label of element
 	Action interface{} // Url of element
-	Hidden bool        // Element is hidden
-	Active bool        // Element is active
+	Hidden bool        // Element is hidden and can't be render
+	Active bool        // Element is active (highlighted)
 }
 
 func (w *NavBarItem) Render(ctx echo.Context) (interface{}, error) {
@@ -88,12 +119,13 @@ func (w *NavBarItem) Render(ctx echo.Context) (interface{}, error) {
 	return res, nil
 }
 
+// Drop down submenu of navigation bar.
 // Must be nested for NavBarNav
 type NavBarDropDown struct {
 	Label      interface{} // Title of submenu
 	Items      List        // Items of submenu (NavBarItem)
-	Hidden     bool        // Submenu is hidden
-	AllowEmpty bool        // Allow empty submenu
+	Hidden     bool        // Submenu is hidden and can't be render
+	AllowEmpty bool        // Allow empty submenu (otherwise hide)
 }
 
 func (w *NavBarDropDown) Render(ctx echo.Context) (interface{}, error) {
@@ -122,10 +154,11 @@ func (w *NavBarDropDown) Render(ctx echo.Context) (interface{}, error) {
 	return res, nil
 }
 
+// Simple text, nested in navigatin bar.
 // Must be nested for NavBarNav (not navbar link)
 type NavBarText struct {
 	Body   interface{} // Text
-	Hidden bool        // Text is hidden
+	Hidden bool        // Text is hidden and can't be render
 }
 
 func (w *NavBarText) Render(ctx echo.Context) (interface{}, error) {
@@ -144,15 +177,21 @@ func (w *NavBarText) Render(ctx echo.Context) (interface{}, error) {
 	return res, nil
 }
 
+// Hyperlink, nested in navigation bar.
 // Must be nested for NavBarText (not in navbar link)
 type NavBarLink struct {
 	Label   interface{} // Hyperlink label
 	Action  interface{} // Hyperlink action
 	Tooltip interface{} // Hyperlink tooltip
 	Post    bool        // Hyperlink used post
+	Hidden  bool        // Hyperlink is hidden and can't be render
 }
 
 func (w *NavBarLink) Render(ctx echo.Context) (interface{}, error) {
+	if w.Hidden || w.Label == nil {
+		return nil, nil
+	}
+
 	res := make(map[string]interface{}, 16)
 
 	if w.Action != nil {
@@ -188,6 +227,7 @@ func (w *NavBarLink) Render(ctx echo.Context) (interface{}, error) {
 	return res, nil
 }
 
+// Inline form, nested in navigation bar
 // Must be nested for NavBarNav (not navbar link)
 type NavBarForm struct {
 	Form // Form elements

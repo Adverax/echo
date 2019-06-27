@@ -244,6 +244,24 @@ func NewValidationError(id uint32) ValidationError {
 	return &simpleValidationError{id: id}
 }
 
+type simpleValidationErrorString struct {
+	msg string
+}
+
+func (e *simpleValidationErrorString) Error() string {
+	return "Validation error " + e.msg
+}
+
+func (e *simpleValidationErrorString) Translate(
+	ctx Context,
+) (string, error) {
+	return e.msg, nil
+}
+
+func NewValidationErrorString(msg string) ValidationError {
+	return &simpleValidationErrorString{msg: msg}
+}
+
 // Complex validation error
 type Cause struct {
 	Msg  uint32        // Identifier of message
@@ -358,6 +376,8 @@ func RenderWidget(
 	switch w := v.(type) {
 	case Widget:
 		return w.Render(ctx)
+	case func(ctx Context) (interface{}, error):
+		return w(ctx)
 	default:
 		return v, nil
 	}

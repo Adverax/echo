@@ -22,19 +22,21 @@ import (
 	"github.com/adverax/echo/generic"
 )
 
+// Table column definition
 type TableColumn struct {
 	Label    interface{}  // Column label
-	Hidden   bool         // Column is hidden
-	Data     DataFunc     // Column data
-	Expander ExpanderFund // Column expander
+	Hidden   bool         // Column is hidden and can't be render
+	Data     DataFunc     // Column data provider
+	Expander ExpanderFunc // Column expander for generate extra info
 }
 
+// Single table action
 type TableAction struct {
-	Action  interface{} // Custom action
+	Action  interface{} // Custom action (string or url.Url or *url.Url)
 	Tooltip interface{} // Action tooltip
 	Confirm interface{} // Confirmation text
 	Post    bool        // Use post request
-	Hidden  bool        // Action is hidden
+	Hidden  bool        // Action is hidden and can't be render
 }
 
 func (w *TableAction) Render(
@@ -80,10 +82,11 @@ var DefaultTableActionView = &TableAction{}
 var DefaultTableActionUpdate = &TableAction{}
 var DefaultTableActionDelete = &TableAction{}
 
+// TableActions is widget for make column with action list.
 type TableActions struct {
-	RowId interface{} // Row identifier
+	RowId interface{} // Current row identifier or func for read it.
 	Path  string      // Base path to family of actions (optional)
-	Items Map         // Action map
+	Items Map         // Action map.
 }
 
 func (w *TableActions) Render(
@@ -94,7 +97,7 @@ func (w *TableActions) Render(
 		path = ctx.Request().URL.Path
 		path = ctx.Echo().UrlLinker.Collapse(ctx, path)
 	}
-	rowId, _ := generic.ConvertToString(w.RowId)
+	rowId := w.getRowId()
 
 	actions := make(map[string]interface{}, len(w.Items))
 	for key, act := range w.Items {
@@ -139,13 +142,62 @@ func (w *TableActions) Render(
 	return actions, nil
 }
 
+func (w *TableActions) getRowId() string {
+	var val interface{}
+
+	switch v := w.RowId.(type) {
+	case func() interface{}:
+		val = v()
+	default:
+		val = v
+	}
+
+	res, _ := generic.ConvertToString(val)
+	return res
+}
+
 type TableColumns map[string]*TableColumn
 
 // Widget for display simple html table.
+// Example:
+//   provider := &myDataProvider{ ... }
+//   table := &widget.Table{
+//       Pager: widget.Pager{
+//           Provider: provider,
+//       },
+//       Columns: widget.TableColumns{
+//           &widget.TableColumn{
+//               Label: "Name",
+//               Data: func() (interface{}, error){
+//                   return provider.row.Name, nil
+//               },
+//           },
+//           &widget.TableActions{
+//               RowId: func() interface{}{
+//                   return provider.row.Id
+//               },
+//               Items: Map{
+//                   "View": widget.DefaultTableActionView,
+//                   "Update": widget.DefaultTableActionUpdate,
+//                   "Message": &widget.TableAction{
+//                        Action: fmt.Sptintf("/user/message/%d", row.Id),
+//                        Tooltip: "Send message",
+//                   },
+//               },
+//           },
+//       },
+//       // Highlight selected rows
+//       RowExpander: func(cell map[string]interface{}) error {
+//           if provider.row.Selected {
+//               cell["Class"] = "selected"
+//           }
+//           return nil
+//       },
+//   }
 type Table struct {
 	Pager
 	Columns     TableColumns // Columns declaration
-	RowExpander ExpanderFund // Row expander
+	RowExpander ExpanderFunc // Row expander
 }
 
 func (w *Table) Render(

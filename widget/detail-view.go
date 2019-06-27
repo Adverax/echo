@@ -22,8 +22,13 @@ import (
 )
 
 // Widget for display list of key/value pairs.
+// The widget generates the following structure:
+// * Head
+// ** Key - label for Key column
+// ** Value - label for Value column
+// * Body - contains sequence of details
 type DetailView struct {
-	Hidden    bool        // Details is hidden
+	Hidden    bool        // Details is hidden and not can't be render
 	Items     Details     // Rows
 	KeyColumn interface{} // Label for key column
 	ValColumn interface{} // Label for value column
@@ -80,10 +85,10 @@ func (w *DetailView) Render(
 type Details map[string]Detail
 
 type Detail struct {
-	Hidden bool        // Detail is hidden
-	Label  interface{} // Detail title
-	Value  interface{} // Value
-	Type   string      // Column type (optional)
+	Hidden bool        // Detail is hidden and can't be render
+	Label  interface{} // Detail title (string or Widget)
+	Value  interface{} // Value (string or Widget)
+	Type   string      // Column type (optional) for customization
 }
 
 func (w *Detail) Render(

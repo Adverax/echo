@@ -21,9 +21,10 @@ import (
 	"github.com/adverax/echo"
 )
 
+// Single breadcrumb
 type Breadcrumb struct {
 	Label  interface{} // Label for action
-	Action interface{} // Action (optional)
+	Action interface{} // Action (optional). May be (string or url.Url or *url.Url)
 }
 
 // Widget for display path in the tree navigation.
